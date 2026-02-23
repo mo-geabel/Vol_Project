@@ -1,0 +1,167 @@
+### MEMS API Testing Collection
+### You can use the "REST Client" extension in VS Code to run these requests directly.
+
+@baseUrl = http://localhost:5000/api
+# Replace this token with the one you receive from the Login request
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzQyODk4MzQ0LCJleHAiOjE3NDI5ODQ3NDR9.01j_7649223323232323232323232323232323232323232323232323232323232323
+
+### ==========================================
+### 1. AUTHENTICATION
+### ==========================================
+
+### Register an Admin
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Admin User",
+  "username": "admin1",
+  "password": "password123",
+  "role": "admin"
+}
+
+###
+
+### Login (Copy the token from the response)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin1",
+  "password": "password123"
+}
+
+###
+
+### Get Current User Profile (Needs Token)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### ==========================================
+### 2. USER MANAGEMENT (Admin Only)
+### ==========================================
+
+### Get All Users
+GET {{baseUrl}}/users
+Authorization: Bearer {{token}}
+
+### ==========================================
+### 3. CLASSES
+### ==========================================
+
+### Create a new Quran Class (Admin Only)
+POST {{baseUrl}}/classes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "class_name": "Beginner Quran A",
+  "type": "Quran",
+  "teacher_id": 1 
+}
+
+### View All Classes
+GET {{baseUrl}}/classes
+Authorization: Bearer {{token}}
+
+### ==========================================
+### 4. STUDENTS
+### ==========================================
+
+### Create a Student (Admin Only)
+POST {{baseUrl}}/students
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Ahmed Ali",
+  "contact_info": "123-456-7890",
+  "parent_info": "Ali Muhammad",
+  "date_of_birth": "2010-05-15"
+}
+
+### Get All Students
+GET {{baseUrl}}/students
+Authorization: Bearer {{token}}
+
+### ==========================================
+### 5. ENROLLMENTS
+### ==========================================
+
+### Enroll a Student in a Class
+POST {{baseUrl}}/enrollments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "student_id": 1,
+  "class_id": 1
+}
+
+### Get All Enrollments
+GET {{baseUrl}}/enrollments
+Authorization: Bearer {{token}}
+
+### ==========================================
+### 6. SCHEDULES (Dynamic Calendar)
+### ==========================================
+
+### Setup Schedule for a Month
+POST {{baseUrl}}/schedules
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "month_year": "2026-02",
+  "weekend_config": [5, 6], 
+  "manual_overrides": {
+    "2026-02-15": "Passive",
+    "2026-02-28": "Active"
+  }
+}
+
+### Get Schedule and Active Day Metrics
+GET {{baseUrl}}/schedules/2026-02
+Authorization: Bearer {{token}}
+
+### ==========================================
+### 7. PROGRESS & ATTENDANCE
+### ==========================================
+
+### Log Quran Progress (Automatically marks student as Present)
+POST {{baseUrl}}/progress/quran
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "enrollment_id": 1,
+  "date": "2026-02-10",
+  "type": "Hifz",
+  "surah_id": 1,
+  "start_verse": 1,
+  "end_verse": 7,
+  "rating": 5
+}
+
+### Get Progress for a single enrollment
+GET {{baseUrl}}/progress/1
+Authorization: Bearer {{token}}
+
+### Mark general attendance for a day (Batch)
+POST {{baseUrl}}/attendance
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "date": "2026-02-12",
+  "attendanceList": [
+    {
+      "enrollment_id": 1,
+      "status": "Absent"
+    }
+  ]
+}
+
+### Get Attendance for a class on a specific date
+GET {{baseUrl}}/attendance/1/2026-02-12
+Authorization: Bearer {{token}}

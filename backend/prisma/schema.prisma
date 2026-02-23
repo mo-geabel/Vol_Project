@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  admin
+  teacher
+}
+
+enum ClassType {
+  Quran
+  Theory
+}
+
+enum EnrollmentStatus {
+  Active
+  Disabled
+}
+
+enum AttendanceStatus {
+  Present
+  Absent
+  Excused
+}
+
+enum ProgressType {
+  Hifz
+  Muraja
+}
+
+// Models
+
+model User {
+  id            Int       @id @default(autoincrement())
+  name          String
+  username      String    @unique
+  password_hash String
+  role          Role      @default(teacher)
+  classes       Class[]
+
+  @@map("users")
+}
+
+model Student {
+  id            Int          @id @default(autoincrement())
+  name          String
+  contact_info  String?
+  parent_info   String?
+  date_of_birth DateTime?
+  enrollments   Enrollment[]
+
+  @@map("students")
+}
+
+model Class {
+  id                Int       @id @default(autoincrement())
+  class_name        String
+  type              ClassType
+  teacher_id        Int
+  teacher           User      @relation(fields: [teacher_id], references: [id])
+  schedule_settings Json?     // Any extra settings
+  enrollments       Enrollment[]
+  schedules         Schedule[]
+
+  @@map("classes")
+}
+
+model Schedule {
+  id               Int       @id @default(autoincrement())
+  month_year       String    // e.g., "YYYY-MM"
+  weekend_config   Int[]     // e.g., [5, 6] for Fri, Sat
+  manual_overrides Json?     // e.g., { "2026-02-15": "Passive", "2026-02-28": "Active" }
+  class_id         Int?      // Null for global Quran schedule, linked to specific class for Theory
+  class            Class?    @relation(fields: [class_id], references: [id])
+
+  @@map("schedules")
+}
+
+model Enrollment {
+  id               Int              @id @default(autoincrement())
+  student_id       Int
+  student          Student          @relation(fields: [student_id], references: [id])
+  class_id         Int
+  class            Class            @relation(fields: [class_id], references: [id])
+  status           EnrollmentStatus @default(Active)
+  attendances      Attendance[]
+  quran_progress   QuranProgress[]
+  theory_progress  TheoryProgress[]
+
+  @@unique([student_id, class_id]) // A student can only be enrolled in a specific class once
+  @@map("enrollments")
+}
+
+model Attendance {
+  id            Int              @id @default(autoincrement())
+  enrollment_id Int
+  enrollment    Enrollment       @relation(fields: [enrollment_id], references: [id])
+  date          DateTime         @db.Date
+  status        AttendanceStatus
+
+  @@unique([enrollment_id, date]) // Only one attendance record per student per day
+  @@map("attendances")
+}
+
+model QuranProgress {
+  id            Int          @id @default(autoincrement())
+  enrollment_id Int
+  enrollment    Enrollment   @relation(fields: [enrollment_id], references: [id])
+  date          DateTime     @db.Date
+  type          ProgressType
+  surah_id      Int          // 1-114
+  start_verse   Int
+  end_verse     Int
+  rating        Int?         // Optional rating out of 5, for tracking performance
+
+  @@map("quran_progress")
+}
+
+model TheoryProgress {
+  id            Int          @id @default(autoincrement())
+  enrollment_id Int
+  enrollment    Enrollment   @relation(fields: [enrollment_id], references: [id])
+  date          DateTime     @db.Date
+  topic_name    String
+  notes         String?
+
+  @@map("theory_progress")
+}
+
+model QuranMetadata {
+  surah_id    Int    @id
+  surah_name  String
+  verse_count Int
+
+  @@map("quran_metadata")
+}
