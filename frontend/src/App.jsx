@@ -7,8 +7,10 @@ import DashboardLayout from './components/DashboardLayout';
 import AdminDashboard from './pages/AdminDashboard';
 import Users from './pages/admin/Users';
 import Classes from './pages/admin/Classes';
-import Students from './pages/admin/Students';
+import QuranicStudents from './pages/admin/QuranicStudents';
+import TheoricStudents from './pages/admin/TheoricStudents';
 import Schedules from './pages/admin/Schedules';
+import Settings from './pages/admin/Settings';
 import TeacherDashboard from './pages/TeacherDashboard';
 import TeacherClasses from './pages/teacher/TeacherClasses';
 import Attendance from './pages/teacher/Attendance';
@@ -31,8 +33,10 @@ function App() {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<Users />} />
             <Route path="/admin/classes" element={<Classes />} />
-            <Route path="/admin/students" element={<Students />} />
+            <Route path="/admin/students/quranic" element={<QuranicStudents />} />
+            <Route path="/admin/students/theoric" element={<TheoricStudents />} />
             <Route path="/admin/schedules" element={<Schedules />} />
+            <Route path="/admin/settings" element={<Settings />} />
           </Route>
         </Route>
 

@@ -3,7 +3,7 @@ const router = express.Router();
 const {
   getEnrollments,
   createEnrollment,
-  updateEnrollmentStatus,
+  updateEnrollment,
   deleteEnrollment,
 } = require('../controllers/enrollmentController');
 const { protect } = require('../middlewares/authMiddleware');
@@ -13,7 +13,7 @@ router.route('/')
   .post(protect(['admin']), createEnrollment); // Only Admin enrolls
 
 router.route('/:id')
-  .put(protect(['admin']), updateEnrollmentStatus) // Only Admin updates status (e.g. reactivates)
+  .put(protect(['admin']), updateEnrollment) // Only Admin updates (status or class)
   .delete(protect(['admin']), deleteEnrollment);
 
 module.exports = router;

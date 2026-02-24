@@ -109,7 +109,7 @@ const deleteUser = async (req, res) => {
       where: { id: Number(req.params.id) },
     });
 
-    res.json({ message: 'User removed' });
+    res.json({ message: 'User removed and unassigned from any classes' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

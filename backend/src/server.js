@@ -22,6 +22,9 @@ app.use('/api/enrollments', require('./routes/enrollmentRoutes'));
 app.use('/api/schedules', require('./routes/scheduleRoutes'));
 app.use('/api/progress', require('./routes/progressRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/teacher', require('./routes/teacherRoutes'));
+app.use('/api/settings', require('./routes/settingsRoutes'));
 
 const PORT = process.env.PORT || 5000;
 

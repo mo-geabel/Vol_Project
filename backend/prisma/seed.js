@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcrypt');
 const prisma = new PrismaClient({});
 
 const surahs = [
@@ -120,17 +121,138 @@ const surahs = [
 ];
 
 async function main() {
-  console.log('Start seeding Quran metadata...');
-  
+  console.log('Start seeding...');
+
+  // 0. Clear existing data in reverse order of dependencies
+  console.log('Clearing existing data...');
+  await prisma.theoryProgress.deleteMany({});
+  await prisma.quranProgress.deleteMany({});
+  await prisma.attendance.deleteMany({});
+  await prisma.enrollment.deleteMany({});
+  await prisma.schedule.deleteMany({});
+  await prisma.class.deleteMany({});
+  await prisma.student.deleteMany({});
+  await prisma.user.deleteMany({});
+  await prisma.quranMetadata.deleteMany({});
+
+  // 1. Seed Quran Metadata
+  console.log('Seeding Quran metadata...');
   for (const surah of surahs) {
-    await prisma.quranMetadata.upsert({
-      where: { surah_id: surah.surah_id },
-      update: {},
-      create: surah,
+    await prisma.quranMetadata.create({
+      data: surah,
     });
   }
+
+  // 2. Seed Users (Admin and Teachers)
+  console.log('Seeding users...');
+  const salt = await bcrypt.genSalt(10);
+  const adminPassword = await bcrypt.hash('admin123', salt);
+  const teacherPassword = await bcrypt.hash('teacher123', salt);
+
+  const admin = await prisma.user.create({
+    data: {
+      name: 'Super Admin',
+      username: 'admin',
+      password_hash: adminPassword,
+      role: 'admin',
+    },
+  });
+
+  const teacher1 = await prisma.user.create({
+    data: {
+      name: 'Sheikh Ahmed',
+      username: 'teacher1',
+      password_hash: teacherPassword,
+      role: 'teacher',
+    },
+  });
+
+  const teacher2 = await prisma.user.create({
+    data: {
+      name: 'Sheikh Omar',
+      username: 'teacher2',
+      password_hash: teacherPassword,
+      role: 'teacher',
+    },
+  });
+
+  // 3. Seed Students
+  console.log('Seeding students...');
+  const studentNames = [
+    'Abdullah Ali', 'Fatimah Hassan', 'Zaid Rahman', 'Maryam Ibrahim',
+    'Omar Khalid', 'Aisha Yusuf', 'Hamza Bakri', 'Khadijah Salim',
+    'Ibrahim Musa', 'Sara Jalal'
+  ];
+
+  const students = [];
+  for (const name of studentNames) {
+    const student = await prisma.student.create({
+      data: {
+        name,
+        contact_info: '555-0101',
+        parent_info: 'Parent of ' + name,
+        date_of_birth: new Date('2015-01-01'),
+      },
+    });
+    students.push(student);
+  }
+
+  // 4. Seed Classes
+  console.log('Seeding classes...');
+  const class1 = await prisma.class.create({
+    data: {
+      class_name: 'Beginners Hifz',
+      type: 'Quran',
+      teacher_id: teacher1.id,
+    },
+  });
+
+  const class2 = await prisma.class.create({
+    data: {
+      class_name: 'Advanced Tajweed',
+      type: 'Quran',
+      teacher_id: teacher1.id,
+    },
+  });
+
+  const class3 = await prisma.class.create({
+    data: {
+      class_name: 'Fiqh Basics',
+      type: 'Theory',
+      teacher_id: teacher2.id,
+    },
+  });
+
+  const class4 = await prisma.class.create({
+    data: {
+      class_name: 'Islamic History',
+      type: 'Theory',
+      teacher_id: teacher2.id,
+    },
+  });
+
+  // 5. Seed Enrollments
+  console.log('Seeding enrollments...');
+  const classes = [class1, class2, class3, class4];
   
-  console.log('Seeding finished.');
+  // Enroll each student in 1-2 random classes
+  for (const student of students) {
+    const numEnrollments = Math.floor(Math.random() * 2) + 1; // 1 or 2
+    const shuffledClasses = [...classes].sort(() => 0.5 - Math.random());
+    const selectedClasses = shuffledClasses.slice(0, numEnrollments);
+
+    for (const cls of selectedClasses) {
+      await prisma.enrollment.create({
+        data: {
+          student_id: student.id,
+          class_id: cls.id,
+          status: 'Active',
+        },
+      });
+    }
+  }
+
+  console.log('Seeding finished successfully.');
 }
 
 main()

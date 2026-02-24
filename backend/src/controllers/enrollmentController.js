@@ -106,14 +106,14 @@ const createEnrollment = async (req, res) => {
   }
 };
 
-// @desc    Update enrollment status (Disable/Reactivate)
+// @desc    Update enrollment (Status or Class reassignment)
 // @route   PUT /api/enrollments/:id
 // @access  Private/Admin
-const updateEnrollmentStatus = async (req, res) => {
+const updateEnrollment = async (req, res) => {
   try {
-    const { status } = req.body; // 'Active' or 'Disabled'
+    const { status, class_id } = req.body; // 'Active' or 'Disabled', and optional class_id
 
-    if (!['Active', 'Disabled'].includes(status)) {
+    if (status && !['Active', 'Disabled'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status. Use Active or Disabled.' });
     }
 
@@ -144,9 +144,35 @@ const updateEnrollmentStatus = async (req, res) => {
       }
     }
 
+    // If changing class, handle potential unique constraint conflicts
+    if (class_id && Number(class_id) !== enrollmentExists.class_id) {
+      // Check if student is already enrolled in the target class (e.g. they were in it previously)
+      const existingInTarget = await prisma.enrollment.findUnique({
+        where: {
+          student_id_class_id: {
+            student_id: enrollmentExists.student_id,
+            class_id: Number(class_id)
+          }
+        }
+      });
+
+      if (existingInTarget) {
+        // If it's a different enrollment ID, we must remove it to allow the reassignment
+        // This is safe because the user wants to MOVE the current history to this class.
+        // The existing record is likely a "Disabled" residue from a previous assignment.
+        await prisma.enrollment.delete({
+          where: { id: existingInTarget.id }
+        });
+      }
+    }
+
+    const updateData = {};
+    if (status) updateData.status = status;
+    if (class_id) updateData.class_id = Number(class_id);
+
     const updatedEnrollment = await prisma.enrollment.update({
       where: { id: Number(req.params.id) },
-      data: { status },
+      data: updateData,
       include: {
         student: { select: { id: true, name: true } },
         class: { select: { id: true, class_name: true, type: true } },
@@ -189,6 +215,6 @@ const deleteEnrollment = async (req, res) => {
 module.exports = {
   getEnrollments,
   createEnrollment,
-  updateEnrollmentStatus,
+  updateEnrollment,
   deleteEnrollment,
 };

@@ -9,7 +9,15 @@ const getStudents = async (req, res) => {
     let students;
     
     if (req.user.role === 'admin') {
-      students = await prisma.student.findMany();
+      students = await prisma.student.findMany({
+        include: {
+          enrollments: {
+            include: {
+              class: true
+            }
+          }
+        }
+      });
     } else {
       // Teacher only sees students enrolled in their classes
       students = await prisma.student.findMany({
@@ -22,6 +30,13 @@ const getStudents = async (req, res) => {
             },
           },
         },
+        include: {
+          enrollments: {
+            include: {
+              class: true
+            }
+          }
+        }
       });
     }
 

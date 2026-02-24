@@ -75,7 +75,7 @@ const createClass = async (req, res) => {
       data: {
         class_name,
         type,
-        teacher_id: Number(teacher_id),
+        teacher_id: teacher_id ? Number(teacher_id) : null,
         schedule_settings: schedule_settings || {},
       },
     });
@@ -107,7 +107,7 @@ const updateClass = async (req, res) => {
       data: {
         class_name: class_name || classExists.class_name,
         type: type || classExists.type,
-        teacher_id: teacher_id ? Number(teacher_id) : classExists.teacher_id,
+        teacher_id: teacher_id !== undefined ? (teacher_id ? Number(teacher_id) : null) : classExists.teacher_id,
         schedule_settings: schedule_settings || classExists.schedule_settings,
       },
     });
@@ -124,19 +124,39 @@ const updateClass = async (req, res) => {
 // @access  Private/Admin
 const deleteClass = async (req, res) => {
   try {
+    const classId = Number(req.params.id);
     const classExists = await prisma.class.findUnique({
-      where: { id: Number(req.params.id) },
+      where: { id: classId },
     });
 
     if (!classExists) {
       return res.status(404).json({ message: 'Class not found' });
     }
 
-    await prisma.class.delete({
-      where: { id: Number(req.params.id) },
+    // Use a transaction to delete all related data safely
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete progress records related to enrollments in this class
+      const enrollments = await tx.enrollment.findMany({
+        where: { class_id: classId },
+        select: { id: true }
+      });
+      const enrollmentIds = enrollments.map(e => e.id);
+
+      if (enrollmentIds.length > 0) {
+        await tx.attendance.deleteMany({ where: { enrollment_id: { in: enrollmentIds } } });
+        await tx.quranProgress.deleteMany({ where: { enrollment_id: { in: enrollmentIds } } });
+        await tx.theoryProgress.deleteMany({ where: { enrollment_id: { in: enrollmentIds } } });
+        await tx.enrollment.deleteMany({ where: { id: { in: enrollmentIds } } });
+      }
+
+      // 2. Delete class schedules
+      await tx.schedule.deleteMany({ where: { class_id: classId } });
+
+      // 3. Delete the class itself
+      await tx.class.delete({ where: { id: classId } });
     });
 
-    res.json({ message: 'Class removed' });
+    res.json({ message: 'Class and all related records removed successfully' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

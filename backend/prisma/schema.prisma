@@ -65,8 +65,8 @@ model Class {
   id                Int       @id @default(autoincrement())
   class_name        String
   type              ClassType
-  teacher_id        Int
-  teacher           User      @relation(fields: [teacher_id], references: [id])
+  teacher_id        Int?
+  teacher           User?     @relation(fields: [teacher_id], references: [id], onDelete: SetNull)
   schedule_settings Json?     // Any extra settings
   enrollments       Enrollment[]
   schedules         Schedule[]
@@ -142,4 +142,11 @@ model QuranMetadata {
   verse_count Int
 
   @@map("quran_metadata")
+}
+
+model SystemSetting {
+  key   String @id
+  value Json
+  
+  @@map("system_settings")
 }

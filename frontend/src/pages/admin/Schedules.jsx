@@ -1,174 +1,351 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
-import { Plus, Calendar, Settings } from 'lucide-react';
-import { format } from 'date-fns';
+import { 
+  Calendar as CalendarIcon, 
+  Settings, 
+  ChevronLeft, 
+  ChevronRight,
+  Info,
+  Save,
+  Coffee,
+  Sun
+} from 'lucide-react';
+import { 
+  format, 
+  addMonths, 
+  subMonths, 
+  startOfMonth, 
+  endOfMonth, 
+  eachDayOfInterval, 
+  getDay, 
+  isSameMonth,
+  isToday,
+  parseISO
+} from 'date-fns';
 
 const Schedules = () => {
-  const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [scheduleData, setScheduleData] = useState(null);
+  const [saving, setSaving] = useState(false);
   
-  // Format: "YYYY-MM" for input type="month"
-  const currentMonthYear = format(new Date(), 'yyyy-MM');
-  const [formData, setFormData] = useState({ 
-    month_year: currentMonthYear, 
-    weekend_config: [5, 6] // Default Fri, Sat
-  });
+  // Local state for edits
+  const [weekendConfig, setWeekendConfig] = useState([5, 6]);
+  const [manualOverrides, setManualOverrides] = useState({});
 
-  const fetchSchedules = async () => {
+  const monthYearStr = format(currentDate, 'yyyy-MM');
+
+  const fetchSchedule = async () => {
+    setLoading(true);
     try {
-      // Just fetching the month of the current selected generic form for now
-      // Or we can list all available schedules. Given the backend API we created:
-      // GET /schedules/:month_year
-      // We don't have a "get all schedules endpoint" so we will just display the selected one
-      const res = await api.get(`/schedules/${formData.month_year}`);
-      setSchedules([res.data]); // Wrapping in array for table mapping
+      const res = await api.get(`/schedules/${monthYearStr}`);
+      setScheduleData(res.data);
+      setWeekendConfig(res.data.schedule.weekend_config || [5, 6]);
+      setManualOverrides(res.data.schedule.manual_overrides || {});
     } catch (error) {
-      if(error.response?.status === 404) {
-        setSchedules([]); // None found
-      } else {
-        toast.error('Failed to load schedule');
-      }
+      console.error('Error fetching schedule:', error);
+      toast.error('Failed to load schedule');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSchedules();
-  }, [formData.month_year]); // Refetch when month changes
+    fetchSchedule();
+  }, [monthYearStr]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      await api.post('/schedules', formData);
-      toast.success('Schedule configured successfully');
-      setShowModal(false);
-      fetchSchedules();
+      await api.post('/schedules', {
+        month_year: monthYearStr,
+        weekend_config: weekendConfig,
+        manual_overrides: manualOverrides
+      });
+      toast.success('Schedule saved successfully');
+      fetchSchedule();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to configure schedule');
+      toast.error('Failed to save schedule');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const mapWeekends = (days) => {
-    const map = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
-    return days.map(d => map[d]).join(', ');
+  const toggleDay = (dateStr, defaultActive) => {
+    setManualOverrides(prev => {
+      const next = { ...prev };
+      const currentOverride = next[dateStr];
+      
+      if (!currentOverride) {
+        // Create override opposite of default
+        next[dateStr] = defaultActive ? 'Passive' : 'Active';
+      } else {
+        // Delete override (revert to default)
+        delete next[dateStr];
+      }
+      return next;
+    });
   };
 
+  const calendarDays = useMemo(() => {
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+    const days = eachDayOfInterval({ start, end });
+    
+    // Fill leading empty days
+    const leadingDays = getDay(start);
+    const grid = [];
+    for (let i = 0; i < leadingDays; i++) grid.push(null);
+    return [...grid, ...days];
+  }, [currentDate]);
+
+  const getDayInfo = (date) => {
+    if (!date) return null;
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const dayOfWeek = getDay(date);
+    const isWeekendDefault = weekendConfig.includes(dayOfWeek);
+    const override = manualOverrides[dateStr];
+    
+    const isActive = override ? override === 'Active' : !isWeekendDefault;
+    const type = override 
+      ? (override === 'Active' ? 'manual-active' : 'manual-passive')
+      : (isWeekendDefault ? 'default-passive' : 'default-active');
+
+    return { isActive, type, dateStr };
+  };
+
+  const dynamicMetrics = useMemo(() => {
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+    const days = eachDayOfInterval({ start, end });
+    
+    let totalActive = 0;
+    let remaining = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    days.forEach(date => {
+      const info = getDayInfo(date);
+      if (info.isActive) {
+        totalActive++;
+        if (date >= today) {
+          remaining++;
+        }
+      }
+    });
+
+    return { totalActive, remaining };
+  }, [calendarDays, weekendConfig, manualOverrides]);
+
+  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Calendar & Schedules</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Calendar & Schedules</h1>
+          <p className="text-sm text-gray-500 mt-1">Configure active and passive days for attendance tracking.</p>
+        </div>
         <button 
-          onClick={() => setShowModal(true)}
+          onClick={handleSave}
+          disabled={saving || loading}
           className="btn-primary flex items-center gap-2"
         >
-          <Settings size={18} />
-          Configure Month
+          {saving ? 'Saving...' : (
+            <>
+              <Save size={18} />
+              Save Schedule
+            </>
+          )}
         </button>
       </div>
 
-      <div className="card p-6 border border-gray-100 flex items-center gap-4">
-        <label className="text-gray-700 font-medium">Select Month to View:</label>
-        <input 
-          type="month" 
-          className="input-field max-w-xs" 
-          value={formData.month_year}
-          onChange={(e) => setFormData({...formData, month_year: e.target.value})}
-        />
-      </div>
-
-      <div className="card shadow-sm border border-gray-100 overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading schedule...</div>
-        ) : schedules.length > 0 ? (
-          <div>
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center gap-3">
-              <Calendar className="text-primary-600" size={24} />
-              <h2 className="text-lg font-bold text-gray-900">Global Quran Schedule for {schedules[0].schedule.month_year}</h2>
-            </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                <p className="text-sm font-medium text-blue-800">Total Active Days</p>
-                <p className="text-3xl font-bold text-blue-600 mt-1">{schedules[0].metrics.totalActiveDays}</p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                <p className="text-sm font-medium text-green-800">Days Passed</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">{schedules[0].metrics.activeDaysPassed}</p>
-              </div>
-              <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-                <p className="text-sm font-medium text-orange-800">Days Remaining</p>
-                <p className="text-3xl font-bold text-orange-600 mt-1">{schedules[0].metrics.activeDaysLeft}</p>
-              </div>
-            </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 text-sm text-gray-600">
-              Weekend Configuration: <strong>{mapWeekends(schedules[0].schedule.weekend_config)}</strong>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Side: Calendar Control & Weekend Settings */}
+        <div className="space-y-6">
+          <div className="card p-6 border border-gray-100 bg-white">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Settings size={20} className="text-secondary-600" />
+              Weekend Settings
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">Select days that are globally off (Passive) by default.</p>
+            <div className="flex flex-wrap gap-2">
+              {weekDays.map((day, idx) => (
+                <button
+                  key={day}
+                  onClick={() => {
+                    setWeekendConfig(prev => 
+                      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+                    );
+                  }}
+                  className={`px-3 py-2 rounded-xl text-sm font-medium transition-all border ${
+                    weekendConfig.includes(idx)
+                      ? 'bg-secondary-100 text-secondary-700 border-secondary-200 shadow-sm'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  {day}
+                </button>
+              ))}
             </div>
           </div>
-        ) : (
-          <div className="p-12 text-center text-gray-500 flex flex-col items-center">
-            <Calendar className="text-gray-300 mb-3" size={48} />
-            <p className="text-lg font-medium">No schedule configured for {formData.month_year}</p>
-            <p className="text-sm mt-1">Configure this month's schedule to start tracking attendance properly.</p>
-          </div>
-        )}
-      </div>
 
-      {/* Configure Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500/75 backdrop-blur-sm transition-opacity" onClick={() => setShowModal(false)}></div>
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">Configure Month Schedule</h3>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Month / Year</label>
-                    <input type="month" required className="mt-1 input-field" value={formData.month_year} onChange={(e) => setFormData({...formData, month_year: e.target.value})} />
+          <div className="card p-6 border border-gray-100 bg-white">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Info size={20} className="text-blue-600" />
+              Legend
+            </h2>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded bg-white border-2 border-gray-100 shadow-sm"></div>
+                <span className="text-gray-600">Active (Work Day)</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded bg-secondary-100 border-2 border-secondary-200"></div>
+                <span className="text-gray-600">Passive (Weekend)</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded bg-orange-100 border-2 border-orange-300"></div>
+                <span className="text-gray-600">Manual Passive (Day Off)</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded bg-primary-100 border-2 border-primary-300"></div>
+                <span className="text-gray-600">Manual Active (Extra Day)</span>
+              </div>
+            </div>
+          </div>
+
+          {scheduleData && (
+            <div className="card p-6 bg-linear-to-br from-secondary-600 to-secondary-700 text-black shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold flex items-center gap-2">
+                  <Sun size={20} />
+                  Month Metrics
+                </h2>
+                <span className="text-xs px-2 py-0.5 bg-white/20 rounded-full font-medium">
+                  {monthYearStr}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/10 p-3 rounded-xl">
+                  <p className="text-xs text-secondary-100">Total Active</p>
+                  <p className="text-2xl font-bold">{dynamicMetrics.totalActive}</p>
+                </div>
+                <div className="bg-white/10 p-3 rounded-xl">
+                  <p className="text-xs text-secondary-100">Remaining</p>
+                  <p className="text-2xl font-bold">{dynamicMetrics.remaining}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Side: Interactive Calendar */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="card bg-white border border-gray-100 overflow-hidden shadow-sm">
+            {/* Header */}
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="text-secondary-600" size={24} />
+                <h2 className="text-xl font-bold text-gray-800">
+                  {format(currentDate, 'MMMM yyyy')}
+                </h2>
+              </div>
+              <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-200">
+                <button onClick={prevMonth} className="p-2 hover:bg-gray-100 text-gray-600 rounded-lg transition-colors">
+                  <ChevronLeft size={20} />
+                </button>
+                <div className="h-4 w-px bg-gray-200 mx-1"></div>
+                <button onClick={nextMonth} className="p-2 hover:bg-gray-100 text-gray-600 rounded-lg transition-colors">
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Grid */}
+            <div className="p-2 sm:p-4">
+              <div className="grid grid-cols-7 mb-2">
+                {weekDays.map(day => (
+                  <div key={day} className="text-center py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    {day}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Weekend Days</label>
-                    {/* Basic multiselect emulation */}
-                    <div className="flex flex-wrap gap-2">
-                      {[{v:0,l:'Sun'}, {v:1,l:'Mon'}, {v:2,l:'Tue'}, {v:3,l:'Wed'}, {v:4,l:'Thu'}, {v:5,l:'Fri'}, {v:6,l:'Sat'}].map(day => (
-                        <label key={day.v} className="inline-flex items-center cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 w-4 h-4"
-                            checked={formData.weekend_config.includes(day.v)}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              setFormData(prev => ({
-                                ...prev,
-                                weekend_config: checked 
-                                  ? [...prev.weekend_config, day.v] 
-                                  : prev.weekend_config.filter(x => x !== day.v)
-                              }));
-                            }}
-                          />
-                          <span className="ml-2 text-sm text-gray-700">{day.l}</span>
-                        </label>
-                      ))}
-                    </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                {loading ? (
+                  <div className="col-span-7 h-96 flex items-center justify-center text-gray-400 italic">
+                    Loading month view...
                   </div>
+                ) : calendarDays.map((date, i) => {
+                  if (!date) return <div key={`empty-${i}`} className="h-16 sm:h-24 bg-gray-50/50 rounded-xl" />;
                   
-                  <div className="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse border-t border-gray-100 pt-4">
-                    <button type="submit" className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 sm:ml-3 sm:w-auto sm:text-sm">
-                      Save Settings
+                  const info = getDayInfo(date);
+                  const isCurrentDay = isToday(date);
+                  
+                  let bgColor = 'bg-white';
+                  let borderColor = 'border-gray-100';
+                  let iconColor = 'text-gray-300';
+                  
+                  if (info.type === 'default-passive') {
+                    bgColor = 'bg-secondary-50 hover:bg-secondary-100';
+                    borderColor = 'border-secondary-100';
+                    iconColor = 'text-secondary-300';
+                  } else if (info.type === 'manual-passive') {
+                    bgColor = 'bg-orange-50 hover:bg-orange-100';
+                    borderColor = 'border-orange-300';
+                    iconColor = 'text-orange-400';
+                  } else if (info.type === 'manual-active') {
+                    bgColor = 'bg-primary-50 hover:bg-primary-100';
+                    borderColor = 'border-primary-300';
+                    iconColor = 'text-primary-400';
+                  } else {
+                    bgColor = 'bg-white hover:bg-gray-50';
+                    borderColor = 'border-gray-100';
+                    iconColor = 'text-gray-200';
+                  }
+
+                  return (
+                    <button
+                      key={info.dateStr}
+                      onClick={() => toggleDay(info.dateStr, !weekendConfig.includes(getDay(date)))}
+                      className={`h-16 sm:h-24 p-2 sm:p-3 text-left relative flex flex-col justify-between transition-all border-2 rounded-2xl group ${bgColor} ${borderColor} ${isCurrentDay ? 'ring-2 ring-secondary-500 ring-offset-2' : ''}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm sm:text-lg font-bold ${info.isActive ? 'text-gray-800' : 'text-gray-400'}`}>
+                          {format(date, 'd')}
+                        </span>
+                        {!info.isActive && (
+                          <Coffee size={14} className={iconColor} />
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[10px] sm:text-xs font-medium uppercase tracking-tighter ${info.isActive ? 'text-gray-400' : 'text-gray-300'}`}>
+                          {info.isActive ? 'Active' : 'Off'}
+                        </span>
+                        {isCurrentDay && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-secondary-500"></div>
+                        )}
+                      </div>
                     </button>
-                    <button type="button" onClick={() => setShowModal(false)} className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                      Cancel
-                    </button>
-                  </div>
-                </form>
+                  );
+                })}
               </div>
+            </div>
+            
+            <div className="p-4 bg-gray-50 border-t border-gray-100">
+              <p className="text-xs text-gray-500 text-center flex items-center justify-center gap-1">
+                <Info size={14} />
+                Click individual days to toggle between active and passive status. Don't forget to save.
+              </p>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
