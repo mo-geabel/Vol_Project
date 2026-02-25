@@ -48,6 +48,45 @@ const markAttendance = async (req, res) => {
     }
 
     const dateObj = new Date(date);
+    const monthYear = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+    // Use local year, month, date to match the format in manual_overrides (YYYY-MM-DD)
+    const dateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+
+    // Schedule check: Verify if the date is marked as Off/Passive
+    if (attendanceList.length > 0) {
+      const firstEnrollment = await prisma.enrollment.findUnique({
+        where: { id: Number(attendanceList[0].enrollment_id) },
+        include: { class: true }
+      });
+
+      if (firstEnrollment) {
+        const schedule = await prisma.schedule.findFirst({
+          where: {
+            month_year: monthYear,
+            class_id: firstEnrollment.class.type === 'Theory' ? firstEnrollment.class_id : null,
+          }
+        });
+
+        if (schedule) {
+          const dayOfWeek = dateObj.getDay();
+          const overrides = schedule.manual_overrides || {};
+          let isActive = false;
+
+          if (overrides[dateStr]) {
+            isActive = overrides[dateStr] === 'Active';
+          } else {
+            isActive = !schedule.weekend_config.includes(dayOfWeek);
+          }
+
+          if (!isActive) {
+            return res.status(400).json({ 
+              message: `Cannot mark attendance for a day (${dateStr}) that is set as OFF in the schedule.` 
+            });
+          }
+        }
+      }
+    }
+
     const results = [];
 
     for (const record of attendanceList) {

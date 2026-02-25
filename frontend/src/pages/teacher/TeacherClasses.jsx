@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
-import { BookOpen, Users } from 'lucide-react';
+import { BookOpen, Users, ChevronRight } from 'lucide-react';
 
 const TeacherClasses = () => {
   const [classes, setClasses] = useState([]);
@@ -32,18 +33,23 @@ const TeacherClasses = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {classes.map((cls) => (
-          <div key={cls.id} className="card p-6 flex flex-col items-start border-l-4 border-l-secondary-500">
+          <div key={cls.id} className="card p-6 flex flex-col items-start border-l-4 border-l-secondary-500 hover:shadow-lg transition-shadow">
             <div className={`p-3 rounded-xl mb-4 ${cls.type === 'Quran' ? 'bg-primary-100 text-primary-600' : 'bg-secondary-100 text-secondary-600'}`}>
               <BookOpen size={24} />
             </div>
             <h3 className="text-xl font-bold text-gray-900">{cls.class_name}</h3>
             <p className="text-sm text-gray-500 mt-1 capitalize">Type: {cls.type}</p>
             
-            <div className="mt-6 flex items-center text-sm font-medium text-gray-600 bg-gray-50 px-3 py-2 rounded-lg w-full">
-              <Users size={18} className="mr-2 text-gray-400" />
-              {/* In a complete app, we would include an enrollments count in the class fetch */}
-              Students Enrolled
-            </div>
+            <Link 
+              to={cls.type === 'Quran' ? `/teacher/quran/${cls.id}` : `/teacher/theory/${cls.id}`}
+              className="mt-6 flex items-center justify-between text-sm font-medium text-gray-600 bg-gray-50 hover:bg-white hover:text-secondary-600 px-3 py-2 rounded-lg w-full transition-all group"
+            >
+              <div className="flex items-center">
+                <Users size={18} className="mr-2 text-gray-400 group-hover:text-secondary-500" />
+                Track Progress
+              </div>
+              <ChevronRight size={16} className="text-gray-400 group-hover:text-secondary-500" />
+            </Link>
           </div>
         ))}
         {classes.length === 0 && (

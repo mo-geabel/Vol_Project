@@ -126,6 +126,22 @@ const updateStudent = async (req, res) => {
       return res.status(404).json({ message: 'Student not found' });
     }
 
+    // Role check: Teacher can only update if student is in their class
+    if (req.user.role === 'teacher') {
+      const studentWithEnrollments = await prisma.student.findUnique({
+        where: { id: Number(req.params.id) },
+        include: { enrollments: { include: { class: true } } }
+      });
+      
+      const isEnrolledInTeacherClass = studentWithEnrollments.enrollments.some(
+        (e) => e.class.teacher_id === req.user.id
+      );
+      
+      if (!isEnrolledInTeacherClass) {
+        return res.status(403).json({ message: 'Not authorized for this student' });
+      }
+    }
+
     const updatedStudent = await prisma.student.update({
       where: { id: Number(req.params.id) },
       data: {

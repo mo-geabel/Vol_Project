@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
 import { CheckCircle, XCircle, Search, Save } from 'lucide-react';
@@ -11,6 +12,9 @@ const Attendance = () => {
   const [studentsConfig, setStudentsConfig] = useState([]); // List of students for selected class alongside their attendance state
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [offDayMessage, setOffDayMessage] = useState('');
+
+  const location = useLocation();
 
   // Load teacher's classes initially
   useEffect(() => {
@@ -18,25 +22,76 @@ const Attendance = () => {
       try {
         const res = await api.get('/classes');
         setClasses(res.data);
+        
+        // Handle deep-linking from query params
+        const params = new URLSearchParams(location.search);
+        const classIdParam = params.get('classId');
+        if (classIdParam) {
+          setSelectedClass(classIdParam);
+        }
       } catch (error) {
         toast.error('Failed to load classes');
       }
     };
     fetchClasses();
-  }, []);
+  }, [location.search]);
+
+  // Auto-search if deep-linked
+  useEffect(() => {
+    if (classes.length > 0 && selectedClass && date) {
+      const params = new URLSearchParams(location.search);
+      if (params.get('autoSearch') === 'true') {
+        handleSearch({ preventDefault: () => {} });
+      }
+    }
+  }, [classes, selectedClass, date]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!selectedClass || !date) return toast.error('Please select a class and date');
     
     setLoading(true);
+    setOffDayMessage('');
+    setStudentsConfig([]);
+
     try {
+      // 0. Check schedule for selected date
+      const dateObj = new Date(date);
+      const monthYear = date.substring(0, 7);
+      const selectedCls = classes.find(c => c.id === Number(selectedClass));
+      const classQuery = selectedCls?.type === 'Theory' ? `?class_id=${selectedClass}` : '';
+      
+      try {
+        const scheduleRes = await api.get(`/schedules/${monthYear}${classQuery}`);
+        const { schedule } = scheduleRes.data;
+        
+        if (schedule) {
+          const dayOfWeek = dateObj.getDay();
+          const overrides = schedule.manual_overrides || {};
+          let isActive = false;
+
+          if (overrides[date]) {
+            isActive = overrides[date] === 'Active';
+          } else {
+            isActive = !schedule.weekend_config.includes(dayOfWeek);
+          }
+
+          if (!isActive) {
+            setLoading(false);
+            setOffDayMessage(`Attendance cannot be marked because ${format(dateObj, 'PPPP')} is set as an OFF day in the schedule.`);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Schedule check failed', err);
+      }
+
       // 1. Get enrollments for this class
       const enrollmentsRes = await api.get('/enrollments');
-      const classEnrollments = enrollmentsRes.data.filter(e => e.class_id === parseInt(selectedClass) && e.status === 'Active');
+      const classEnrollments = enrollmentsRes.data.filter(e => e.class_id === Number(selectedClass) && e.status === 'Active');
       
       // 2. Get existing attendance for this class/date
-      const attendanceRes = await api.get(`/attendance/class/${selectedClass}/date/${date}`);
+      const attendanceRes = await api.get(`/attendance/${selectedClass}/${date}`);
       const existingAttendance = attendanceRes.data;
 
       // 3. Map to a unified state format
@@ -45,7 +100,7 @@ const Attendance = () => {
         return {
           enrollment_id: enrollment.id,
           student_name: enrollment.student.name,
-          status: existingRec ? existingRec.status : 'Present' // Default to present for quick marking
+          status: existingRec ? existingRec.status : 'Present' 
         };
       });
       
@@ -57,15 +112,9 @@ const Attendance = () => {
     }
   };
 
-  const toggleAttendanceStatus = (index) => {
-    const nextStatusMap = {
-      'Present': 'Absent',
-      'Absent': 'Excused',
-      'Excused': 'Present'
-    };
-    
+  const updateAttendanceStatus = (index, newStatus) => {
     const newConfig = [...studentsConfig];
-    newConfig[index].status = nextStatusMap[newConfig[index].status];
+    newConfig[index].status = newStatus;
     setStudentsConfig(newConfig);
   };
 
@@ -73,7 +122,6 @@ const Attendance = () => {
     if (studentsConfig.length === 0) return;
     setSaving(true);
     try {
-      // The backend expects: { date, attendanceList: [{enrollment_id, status}] }
       const payload = {
         date,
         attendanceList: studentsConfig.map(s => ({
@@ -119,6 +167,16 @@ const Attendance = () => {
         </form>
       </div>
 
+      {offDayMessage && (
+        <div className="card p-8 text-center bg-orange-50 border-orange-200">
+          <div className="mx-auto w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+            <XCircle className="text-orange-600" size={24} />
+          </div>
+          <p className="text-orange-800 font-medium">{offDayMessage}</p>
+          <p className="text-sm text-orange-600 mt-1">If this is a mistake, please contact the admin.</p>
+        </div>
+      )}
+
       {studentsConfig.length > 0 && (
         <div className="card shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-4 py-5 sm:px-6 bg-gray-50 flex justify-between items-center border-b border-gray-200">
@@ -138,24 +196,26 @@ const Attendance = () => {
             {studentsConfig.map((student, index) => (
               <li key={student.enrollment_id} className="px-4 py-4 sm:px-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
                 <div className="text-sm font-medium text-gray-900">{student.student_name}</div>
-                <button 
-                  onClick={() => toggleAttendanceStatus(index)}
-                  className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white focus:outline-none transition-colors w-32 justify-center
-                    ${student.status === 'Present' ? 'bg-green-600 hover:bg-green-700' : 
-                      student.status === 'Absent' ? 'bg-red-600 hover:bg-red-700' : 
-                      'bg-orange-500 hover:bg-orange-600'}`}
-                >
-                  {student.status === 'Present' && <CheckCircle size={16} className="mr-2" />}
-                  {student.status === 'Absent' && <XCircle size={16} className="mr-2" />}
-                  {student.status === 'Excused' && <XCircle size={16} className="mr-2" />}
-                  {student.status}
-                </button>
+                <div className="w-32">
+                  <select
+                    value={student.status}
+                    onChange={(e) => updateAttendanceStatus(index, e.target.value)}
+                    className={`block w-full py-2 px-3 border border-transparent text-sm font-medium rounded-full shadow-sm text-white focus:outline-none transition-colors appearance-none text-center cursor-pointer
+                      ${student.status === 'Present' ? 'bg-green-600 hover:bg-green-700' : 
+                        student.status === 'Absent' ? 'bg-red-600 hover:bg-red-700' : 
+                        'bg-orange-500 hover:bg-orange-600'}`}
+                  >
+                    <option value="Present" className="bg-white text-gray-900">Present</option>
+                    <option value="Absent" className="bg-white text-gray-900">Absent</option>
+                    <option value="Excused" className="bg-white text-gray-900">Excused</option>
+                  </select>
+                </div>
               </li>
             ))}
           </ul>
         </div>
       )}
-      {selectedClass && !loading && studentsConfig.length === 0 && (
+      {!offDayMessage && selectedClass && !loading && studentsConfig.length === 0 && (
         <div className="p-8 text-center text-gray-500 card">
           Click "Load Register" to see students for this date.
         </div>

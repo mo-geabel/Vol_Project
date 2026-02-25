@@ -11,12 +11,16 @@ import QuranicStudents from './pages/admin/QuranicStudents';
 import TheoricStudents from './pages/admin/TheoricStudents';
 import Schedules from './pages/admin/Schedules';
 import Settings from './pages/admin/Settings';
+import Reports from './pages/admin/Reports';
 import TeacherDashboard from './pages/TeacherDashboard';
 import TeacherClasses from './pages/teacher/TeacherClasses';
 import Attendance from './pages/teacher/Attendance';
+import QuranProgress from './pages/teacher/QuranProgress';
+import StudentProgress from './pages/teacher/StudentProgress';
 
 // Placeholder Pages
 const Unauthorized = () => <div className="p-8"><h2>Unauthorized Access</h2></div>;
+const TheoryProgress = () => <div className="p-8"><h2>Theory Progress (Coming Soon)</h2></div>;
 
 function App() {
   const { user } = useAuth();
@@ -37,6 +41,7 @@ function App() {
             <Route path="/admin/students/theoric" element={<TheoricStudents />} />
             <Route path="/admin/schedules" element={<Schedules />} />
             <Route path="/admin/settings" element={<Settings />} />
+            <Route path="/admin/reports" element={<Reports />} />
           </Route>
         </Route>
 
@@ -45,6 +50,9 @@ function App() {
             <Route path="/teacher" element={<TeacherDashboard />} />
             <Route path="/teacher/classes" element={<TeacherClasses />} />
             <Route path="/teacher/attendance" element={<Attendance />} />
+            <Route path="/teacher/quran/:classId" element={<QuranProgress />} />
+            <Route path="/teacher/progress/:enrollmentId" element={<StudentProgress />} />
+            <Route path="/teacher/theory/:classId" element={<TheoryProgress />} />
           </Route>
         </Route>
 

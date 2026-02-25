@@ -41,6 +41,11 @@ const getClassById = async (req, res) => {
       where: { id: Number(req.params.id) },
       include: {
         teacher: { select: { id: true, name: true } },
+        enrollments: {
+          include: {
+            student: true
+          }
+        }
       },
     });
 

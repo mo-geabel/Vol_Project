@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
-import { Plus, Trash2, GraduationCap, Edit2, Users } from 'lucide-react';
+import { Plus, Trash2, GraduationCap, Edit2, Users, TrendingUp } from 'lucide-react';
 
 const QuranicStudents = () => {
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -168,9 +170,15 @@ const QuranicStudents = () => {
             </span>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {unassignedStudents.map(student => (
-              <StudentCard key={student.id} student={student} onEdit={() => openEditModal(student)} onDelete={() => handleDelete(student.id)} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {unassignedStudents.map((student) => (
+              <StudentCard 
+                key={student.id} 
+                student={student} 
+                onEdit={openEditModal} 
+                onDelete={handleDelete}
+                navigate={navigate}
+              />
             ))}
             {unassignedStudents.length === 0 && (
               <p className="text-sm text-gray-400 italic col-span-full">All students are assigned to Quranic classes.</p>
@@ -240,26 +248,48 @@ const QuranicStudents = () => {
   );
 };
 
-const StudentCard = ({ student, onEdit, onDelete }) => (
-  <div className="card p-4 flex items-center justify-between group">
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center text-primary-600 font-bold shrink-0">
-        {student.name.charAt(0).toUpperCase()}
+const StudentCard = ({ student, onEdit, onDelete, navigate }) => {
+  // Use enrollment ID for analytics
+  const activeEnrollment = student.enrollments?.find(e => e.status === 'Active');
+
+  return (
+    <div className="card p-6 flex items-center justify-between group transition-all hover:shadow-md">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-primary-100 text-primary-600 rounded-2xl flex items-center justify-center font-bold text-lg">
+          {student.name.charAt(0)}
+        </div>
+        <div>
+          <h3 className="font-bold text-gray-900">{student.name}</h3>
+          <p className="text-xs text-gray-500">
+            {activeEnrollment ? activeEnrollment.class.class_name : 'Not Enrolled'}
+          </p>
+        </div>
       </div>
-      <div className="min-w-0">
-        <h4 className="text-sm font-bold text-gray-900 truncate">{student.name}</h4>
-        <p className="text-xs text-gray-500 truncate">{student.contact_info || 'No contact'}</p>
+      <div className="flex items-center gap-2">
+        {activeEnrollment && (
+          <button 
+            onClick={() => navigate(`/teacher/progress/${activeEnrollment.id}`)}
+            className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+            title="View Growth Analytics"
+          >
+            <TrendingUp size={18} />
+          </button>
+        )}
+        <button 
+          onClick={() => onEdit(student)}
+          className="p-2 text-gray-400 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors"
+        >
+          <Edit2 size={18} />
+        </button>
+        <button 
+          onClick={() => onDelete(student.id)}
+          className="p-2 text-gray-400 hover:text-red-600 hover:bg-gray-50 rounded-lg transition-colors"
+        >
+          <Trash2 size={18} />
+        </button>
       </div>
     </div>
-    <div className="flex items-center gap-1 transition-opacity">
-      <button onClick={onEdit} className="p-2 text-gray-400 hover:text-primary-600 transition-colors">
-        <Edit2 size={16} />
-      </button>
-      <button onClick={onDelete} className="p-2 text-gray-400 hover:text-red-600 transition-colors">
-        <Trash2 size={16} />
-      </button>
-    </div>
-  </div>
-);
+  );
+};
 
 export default QuranicStudents;

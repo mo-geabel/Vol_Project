@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
   Menu, X, LogOut, Home, Users, BookOpen, 
   CalendarDays, Settings, GraduationCap,
-  ChevronDown, ChevronRight
+  ChevronDown, ChevronRight, FileText
 } from 'lucide-react';
 
 const DashboardLayout = () => {
@@ -31,6 +31,7 @@ const DashboardLayout = () => {
     },
     { name: 'Classes', href: '/admin/classes', icon: BookOpen },
     { name: 'Schedules', href: '/admin/schedules', icon: CalendarDays },
+    { name: 'Reports', href: '/admin/reports', icon: FileText },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 

@@ -15,7 +15,7 @@ router.route('/')
 
 router.route('/:id')
   .get(protect(), getStudentById)
-  .put(protect(['admin']), updateStudent)
+  .put(protect(['admin', 'teacher']), updateStudent)
   .delete(protect(['admin']), deleteStudent);
 
 module.exports = router;

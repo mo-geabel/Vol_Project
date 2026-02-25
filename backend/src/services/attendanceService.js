@@ -48,6 +48,9 @@ const checkAttendanceSixtyPercentRule = async (enrollmentId, actionDate) => {
 
     if (!enrollment || enrollment.status === 'Disabled') return;
 
+    // Skip 60% rule for Theory classes - only apply to Quranic lessons
+    if (enrollment.class.type === 'Theory') return;
+
     const monthYear = `${actionDate.getFullYear()}-${String(actionDate.getMonth() + 1).padStart(2, '0')}`;
 
     // Get the schedule to find active days passed

@@ -30,16 +30,36 @@ const Schedules = () => {
   const [scheduleData, setScheduleData] = useState(null);
   const [saving, setSaving] = useState(false);
   
+  // New state for multi-schedule support
+  const [scheduleType, setScheduleType] = useState('Quranic'); // 'Quranic' or 'Theory'
+  const [classes, setClasses] = useState([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
+
   // Local state for edits
   const [weekendConfig, setWeekendConfig] = useState([5, 6]);
   const [manualOverrides, setManualOverrides] = useState({});
 
   const monthYearStr = format(currentDate, 'yyyy-MM');
 
+  // Load classes for theory selection
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const res = await api.get('/classes');
+        // Only theory classes for specific schedules
+        setClasses(res.data.filter(c => c.type === 'Theory'));
+      } catch (error) {
+        toast.error('Failed to load classes');
+      }
+    };
+    fetchClasses();
+  }, []);
+
   const fetchSchedule = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/schedules/${monthYearStr}`);
+      const classQuery = scheduleType === 'Theory' && selectedClassId ? `?class_id=${selectedClassId}` : '';
+      const res = await api.get(`/schedules/${monthYearStr}${classQuery}`);
       setScheduleData(res.data);
       setWeekendConfig(res.data.schedule.weekend_config || [5, 6]);
       setManualOverrides(res.data.schedule.manual_overrides || {});
@@ -52,8 +72,14 @@ const Schedules = () => {
   };
 
   useEffect(() => {
+    // If theory is selected but no class chosen, don't fetch yet
+    if (scheduleType === 'Theory' && !selectedClassId) {
+      setLoading(false);
+      setScheduleData(null);
+      return;
+    }
     fetchSchedule();
-  }, [monthYearStr]);
+  }, [monthYearStr, scheduleType, selectedClassId]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -61,7 +87,8 @@ const Schedules = () => {
       await api.post('/schedules', {
         month_year: monthYearStr,
         weekend_config: weekendConfig,
-        manual_overrides: manualOverrides
+        manual_overrides: manualOverrides,
+        class_id: scheduleType === 'Theory' ? Number(selectedClassId) : null
       });
       toast.success('Schedule saved successfully');
       fetchSchedule();
@@ -150,18 +177,55 @@ const Schedules = () => {
           <h1 className="text-2xl font-bold text-gray-900">Calendar & Schedules</h1>
           <p className="text-sm text-gray-500 mt-1">Configure active and passive days for attendance tracking.</p>
         </div>
-        <button 
-          onClick={handleSave}
-          disabled={saving || loading}
-          className="btn-primary flex items-center gap-2"
-        >
-          {saving ? 'Saving...' : (
-            <>
-              <Save size={18} />
-              Save Schedule
-            </>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex bg-gray-100 p-1 rounded-xl">
+            <button
+              onClick={() => {
+                setScheduleType('Quranic');
+                setSelectedClassId('');
+              }}
+              className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${
+                scheduleType === 'Quranic' ? 'bg-white text-secondary-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Quranic
+            </button>
+            <button
+              onClick={() => setScheduleType('Theory')}
+              className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${
+                scheduleType === 'Theory' ? 'bg-white text-secondary-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Theory
+            </button>
+          </div>
+
+          {scheduleType === 'Theory' && (
+            <select
+              value={selectedClassId}
+              onChange={(e) => setSelectedClassId(e.target.value)}
+              className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-secondary-500/20"
+            >
+              <option value="">Select a Class...</option>
+              {classes.map(c => (
+                <option key={c.id} value={c.id}>{c.class_name}</option>
+              ))}
+            </select>
           )}
-        </button>
+
+          <button 
+            onClick={handleSave}
+            disabled={saving || loading || (scheduleType === 'Theory' && !selectedClassId)}
+            className="btn-primary flex items-center gap-2"
+          >
+            {saving ? 'Saving...' : (
+              <>
+                <Save size={18} />
+                Save Schedule
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

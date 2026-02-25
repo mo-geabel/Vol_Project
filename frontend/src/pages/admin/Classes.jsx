@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
-import { Plus, Trash2, BookOpen, Edit2 } from 'lucide-react';
+import { Plus, Trash2, BookOpen, Edit2, CheckCircle2, TrendingUp } from 'lucide-react';
 
 const Classes = () => {
+  const navigate = useNavigate();
   const [classes, setClasses] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -107,6 +109,25 @@ const Classes = () => {
               <span className={`font-medium ${cls.teacher ? 'text-gray-900' : 'text-amber-600 italic'}`}>
                 {cls.teacher ? cls.teacher.name : 'Unassigned'}
               </span>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-50 flex gap-2 w-full">
+              <button 
+                onClick={() => navigate(`/teacher/attendance?classId=${cls.id}&autoSearch=true`)}
+                className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-green-50 text-green-700 rounded-xl text-xs font-bold hover:bg-green-100 transition-colors"
+                title="Mark Attendance"
+              >
+                <CheckCircle2 size={14} />
+                Attendance
+              </button>
+              <button 
+                onClick={() => navigate(cls.type === 'Quran' ? `/teacher/quran/${cls.id}` : `/teacher/theory/${cls.id}`)}
+                className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-primary-50 text-primary-700 rounded-xl text-xs font-bold hover:bg-primary-100 transition-colors"
+                title="Record Progress"
+              >
+                <TrendingUp size={14} />
+                Progress
+              </button>
             </div>
             
             <div className="absolute top-4 right-4 flex gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-all">
