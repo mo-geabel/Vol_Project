@@ -4,14 +4,28 @@ import { useAuth } from '../context/AuthContext';
 import { 
   Menu, X, LogOut, Home, Users, BookOpen, 
   CalendarDays, Settings, GraduationCap,
-  ChevronDown, ChevronRight, FileText
+  ChevronDown, ChevronRight, FileText, Languages, TrendingUp
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [openMenus, setOpenMenus] = useState(['Students']); // Default Students menu to open
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+
+  const isRTL = i18n.language === 'ar';
+
+  useEffect(() => {
+    document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+    document.documentElement.lang = i18n.language;
+  }, [i18n.language, isRTL]);
+
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'en' ? 'ar' : 'en';
+    i18n.changeLanguage(newLang);
+  };
 
   const handleLogout = () => {
     logout();
@@ -19,32 +33,34 @@ const DashboardLayout = () => {
   };
 
   const adminNavigation = [
-    { name: 'Dashboard', href: '/admin', icon: Home },
-    { name: 'Users', href: '/admin/users', icon: Users },
+    { name: t('common.dashboard'), href: '/admin', icon: Home },
+    { name: t('common.users'), href: '/admin/users', icon: Users },
     { 
-      name: 'Students', 
+      name: t('common.students'), 
       icon: GraduationCap,
       children: [
-        { name: 'Quranic', href: '/admin/students/quranic', icon: BookOpen },
-        { name: 'Theoric', href: '/admin/students/theoric', icon: GraduationCap },
+        { name: t('common.quranic'), href: '/admin/students/quranic', icon: BookOpen },
+        { name: t('common.theoric'), href: '/admin/students/theoric', icon: GraduationCap },
       ]
     },
-    { name: 'Classes', href: '/admin/classes', icon: BookOpen },
-    { name: 'Schedules', href: '/admin/schedules', icon: CalendarDays },
-    { name: 'Reports', href: '/admin/reports', icon: FileText },
-    { name: 'Settings', href: '/admin/settings', icon: Settings },
+    { name: t('common.classes'), href: '/admin/classes', icon: BookOpen },
+    { name: t('common.schedules'), href: '/admin/schedules', icon: CalendarDays },
+    { name: t('common.reports'), href: '/admin/reports', icon: FileText },
+    { name: t('common.statistics'), href: '/admin/statistics', icon: TrendingUp },
+    { name: t('common.settings'), href: '/admin/settings', icon: Settings },
   ];
 
   const teacherNavigation = [
-    { name: 'Dashboard', href: '/teacher', icon: Home },
-    { name: 'My Classes', href: '/teacher/classes', icon: BookOpen },
-    { name: 'Attendance', href: '/teacher/attendance', icon: CalendarDays },
+    { name: t('common.dashboard'), href: '/teacher', icon: Home },
+    { name: t('common.my_classes'), href: '/teacher/classes', icon: BookOpen },
+    { name: t('common.attendance'), href: '/teacher/attendance', icon: CalendarDays },
+    { name: t('common.statistics'), href: '/teacher/statistics', icon: TrendingUp },
   ];
 
   const navigation = user?.role === 'admin' ? adminNavigation : teacherNavigation;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex overflow-hidden">
+    <div className={`min-h-screen bg-gray-50 flex overflow-hidden ${isRTL ? 'font-arabic' : ''}`}>
       {/* Sidebar overlay (Mobile only) - Lowered z-index and removed blur to prevent modal interference */}
       <div 
         className={`fixed inset-0 z-10 bg-gray-900/10 lg:hidden transition-all duration-300 ${
@@ -55,14 +71,14 @@ const DashboardLayout = () => {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed lg:static inset-y-0 left-0 z-20 w-64 bg-white border-r border-gray-200 transform transition-all duration-300 ease-in-out flex flex-col ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-ml-64'
+        className={`fixed lg:static inset-y-0 start-0 z-20 w-64 bg-white border-inline-end border-gray-200 transform transition-all duration-300 ease-in-out flex flex-col ${
+          sidebarOpen ? 'translate-x-0' : (isRTL ? 'translate-x-full lg:-me-64' : '-translate-x-full lg:-ms-64')
         }`}
       >
         <div className="flex items-center h-16 border-b border-gray-100 px-6 shrink-0 overflow-hidden">
-          <BookOpen className="text-primary-600 mr-2 shrink-0" size={24} />
+          <BookOpen className={`text-primary-600 shrink-0 ${isRTL ? 'ml-2' : 'mr-2'}`} size={24} />
           <span className={`text-xl font-bold bg-linear-to-r from-primary-700 to-primary-500 bg-clip-text text-transparent truncate transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
-            MEMS Portal
+            {t('common.portal_name')}
           </span>
         </div>
 
@@ -86,13 +102,15 @@ const DashboardLayout = () => {
                     className={`flex w-full items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900`}
                   >
                     <div className="flex items-center min-w-0">
-                      <item.icon className="shrink-0 h-5 w-5 mr-3" />
+                      <item.icon className="shrink-0 h-5 w-5 margin-inline-end-3" />
                       <span className={`truncate transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
                         {item.name}
                       </span>
                     </div>
                     {sidebarOpen && (
-                      isOpen ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />
+                      <div className={isRTL ? 'rotate-180' : ''}>
+                        {isOpen ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
+                      </div>
                     )}
                   </button>
                   
@@ -102,7 +120,7 @@ const DashboardLayout = () => {
                       isOpen && sidebarOpen ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
                     }`}
                   >
-                    <div className="pl-10 space-y-1 mt-1">
+                    <div className="padding-inline-start-10 space-y-1 mt-1">
                       {item.children.map((child) => (
                         <NavLink
                           key={child.name}
@@ -118,7 +136,7 @@ const DashboardLayout = () => {
                             if (window.innerWidth < 1024) setSidebarOpen(false);
                           }}
                         >
-                          {child.icon && <child.icon className="shrink-0 h-4 w-4 mr-3" />}
+                          {child.icon && <child.icon className="shrink-0 h-4 w-4 margin-inline-end-3" />}
                           {child.name}
                         </NavLink>
                       ))}
@@ -145,7 +163,7 @@ const DashboardLayout = () => {
                   if (window.innerWidth < 1024) setSidebarOpen(false);
                 }}
               >
-                <item.icon className="shrink-0 h-5 w-5 mr-3" />
+                <item.icon className="shrink-0 h-5 w-5 margin-inline-end-3" />
                 <span className={`truncate transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
                   {item.name}
                 </span>
@@ -168,9 +186,9 @@ const DashboardLayout = () => {
             onClick={handleLogout}
             className="flex w-full items-center px-4 py-2 text-sm font-medium text-red-600 rounded-xl hover:bg-red-50 transition-colors"
           >
-            <LogOut className="shrink-0 h-5 w-5 mr-3" />
+            <LogOut className={`shrink-0 h-5 w-5 ${isRTL ? 'ml-3' : 'mr-3'}`} />
             <span className={`truncate transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
-              Sign Out
+              {t('common.sign_out')}
             </span>
           </button>
         </div>
@@ -206,7 +224,14 @@ const DashboardLayout = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            {/* Additional header items could go here */}
+            <button
+              onClick={toggleLanguage}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
+              title={i18n.language === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
+            >
+              <Languages size={18} />
+              <span>{i18n.language === 'en' ? 'Arabic' : 'English'}</span>
+            </button>
           </div>
         </header>
 

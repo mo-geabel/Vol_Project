@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
 import { Plus, Trash2, BookOpen, Edit2, CheckCircle2, TrendingUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Classes = () => {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const navigate = useNavigate();
   const [classes, setClasses] = useState([]);
   const [teachers, setTeachers] = useState([]);
@@ -22,7 +25,7 @@ const Classes = () => {
       setClasses(classRes.data);
       setTeachers(userRes.data);
     } catch (error) {
-      toast.error('Failed to load data');
+      toast.error(t('classes.load_error'));
     } finally {
       setLoading(false);
     }
@@ -57,42 +60,42 @@ const Classes = () => {
 
       if (editingId) {
         await api.put(`/classes/${editingId}`, payload);
-        toast.success('Class updated successfully');
+        toast.success(t('classes.update_success'));
       } else {
         await api.post('/classes', payload);
-        toast.success('Class created successfully');
+        toast.success(t('classes.create_success'));
       }
       
       setShowModal(false);
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Action failed');
+      toast.error(error.response?.data?.message || t('classes.action_failed'));
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this class? This will permanently delete all related enrollments, attendance, and progress records.')) return;
+    if (!window.confirm(t('classes.delete_confirm'))) return;
     try {
       await api.delete(`/classes/${id}`);
-      toast.success('Class and related data deleted');
+      toast.success(t('classes.delete_success'));
       fetchData();
     } catch (error) {
-      toast.error('Failed to delete class');
+      toast.error(t('classes.delete_error'));
     }
   };
 
-  if (loading) return <div className="p-8">Loading classes...</div>;
+  if (loading) return <div className="p-8">{t('classes.loading')}</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Class Management</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('classes.title')}</h1>
         <button 
           onClick={() => openModal()}
           className="btn-primary flex items-center gap-2"
         >
           <Plus size={18} />
-          Create Class
+          {t('classes.create_class')}
         </button>
       </div>
 
@@ -103,11 +106,11 @@ const Classes = () => {
               <BookOpen size={24} />
             </div>
             <h3 className="text-xl font-bold text-gray-900">{cls.class_name}</h3>
-            <p className="text-sm text-gray-500 mt-1 capitalize">Type: {cls.type}</p>
+            <p className="text-sm text-gray-500 mt-1 capitalize">{t('common.type')}: {cls.type === 'Quran' ? t('classes.quran') : t('classes.theory')}</p>
             <div className="mt-2 text-sm">
-              <span className="text-gray-500">Teacher: </span>
+              <span className="text-gray-500">{t('common.teacher')}: </span>
               <span className={`font-medium ${cls.teacher ? 'text-gray-900' : 'text-amber-600 italic'}`}>
-                {cls.teacher ? cls.teacher.name : 'Unassigned'}
+                {cls.teacher ? cls.teacher.name : t('common.unassigned')}
               </span>
             </div>
 
@@ -115,33 +118,33 @@ const Classes = () => {
               <button 
                 onClick={() => navigate(`/teacher/attendance?classId=${cls.id}&autoSearch=true`)}
                 className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-green-50 text-green-700 rounded-xl text-xs font-bold hover:bg-green-100 transition-colors"
-                title="Mark Attendance"
+                title={t('classes.mark_attendance')}
               >
                 <CheckCircle2 size={14} />
-                Attendance
+                {t('classes.mark_attendance')}
               </button>
               <button 
                 onClick={() => navigate(cls.type === 'Quran' ? `/teacher/quran/${cls.id}` : `/teacher/theory/${cls.id}`)}
                 className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-primary-50 text-primary-700 rounded-xl text-xs font-bold hover:bg-primary-100 transition-colors"
-                title="Record Progress"
+                title={t('classes.record_progress')}
               >
                 <TrendingUp size={14} />
-                Progress
+                {t('classes.record_progress')}
               </button>
             </div>
             
-            <div className="absolute top-4 right-4 flex gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-all">
+            <div className={`absolute top-4 ${isRTL ? 'left-4' : 'right-4'} flex gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-all`}>
               <button 
                 onClick={() => openModal(cls)}
                 className="bg-white rounded-full p-2 shadow-sm border border-gray-100 text-gray-400 hover:text-primary-600 hover:border-primary-100"
-                title="Edit Class"
+                title={t('common.edit')}
               >
                 <Edit2 size={16} />
               </button>
               <button 
                 onClick={() => handleDelete(cls.id)}
                 className="bg-white rounded-full p-2 shadow-sm border border-gray-100 text-gray-400 hover:text-red-600 hover:border-red-100"
-                title="Delete Class"
+                title={t('common.delete')}
               >
                 <Trash2 size={16} />
               </button>
@@ -150,7 +153,7 @@ const Classes = () => {
         ))}
         {classes.length === 0 && (
           <div className="col-span-full card p-12 text-center text-gray-500">
-            No classes found. Create one to get started.
+            {t('classes.no_classes')}
           </div>
         )}
       </div>
@@ -166,38 +169,38 @@ const Classes = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
-                  {editingId ? 'Edit Class' : 'Create New Class'}
+                <h3 className={`text-lg leading-6 font-medium text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`} id="modal-title">
+                  {editingId ? t('classes.edit_class') : t('classes.add_new_class')}
                 </h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Class Name</label>
+                    <label className={`block text-sm font-medium text-gray-700 ${isRTL ? 'text-right' : 'text-left'}`}>{t('classes.class_name')}</label>
                     <input type="text" required className="mt-1 input-field" value={formData.class_name} onChange={(e) => setFormData({...formData, class_name: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Class Type</label>
+                    <label className={`block text-sm font-medium text-gray-700 ${isRTL ? 'text-right' : 'text-left'}`}>{t('classes.class_type')}</label>
                     <select className="mt-1 input-field" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
-                      <option value="Quran">Quran</option>
-                      <option value="Theory">Theory</option>
+                      <option value="Quran">{t('classes.quran')}</option>
+                      <option value="Theory">{t('classes.theory')}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Assign Teacher</label>
+                    <label className={`block text-sm font-medium text-gray-700 ${isRTL ? 'text-right' : 'text-left'}`}>{t('classes.assign_teacher')}</label>
                     <select className="mt-1 input-field" value={formData.teacher_id} onChange={(e) => setFormData({...formData, teacher_id: e.target.value})}>
-                      <option value="">No Teacher (Unassigned)</option>
+                      <option value="">{t('classes.no_teacher')}</option>
                       {teachers.map(t => (
                         <option key={t.id} value={t.id}>{t.name} ({t.role})</option>
                       ))}
                     </select>
-                    <p className="mt-1 text-xs text-gray-500">Classes can exist without an assigned teacher.</p>
+                    <p className={`mt-1 text-xs text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('classes.teacher_hint')}</p>
                   </div>
                   
-                  <div className="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse border-t border-gray-100 pt-4">
+                  <div className={`mt-5 sm:mt-6 sm:flex sm:flex-row-reverse border-t border-gray-100 pt-4 ${isRTL ? 'sm:space-x-reverse' : ''}`}>
                     <button type="submit" className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
-                      {editingId ? 'Save Changes' : 'Create Class'}
+                      {editingId ? t('common.save') : t('classes.create_class')}
                     </button>
                     <button type="button" onClick={() => setShowModal(false)} className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                   </div>
                 </form>

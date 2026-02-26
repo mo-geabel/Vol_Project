@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
 import { Plus, Trash2, GraduationCap, Edit2, Users, TrendingUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const TheoricStudents = () => {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -31,7 +34,7 @@ const TheoricStudents = () => {
       // Filter only Theory classes
       setClasses(classRes.data.filter(c => c.type === 'Theory'));
     } catch (error) {
-      toast.error('Failed to load data');
+      toast.error(t('students.load_error'));
     } finally {
       setLoading(false);
     }
@@ -66,11 +69,11 @@ const TheoricStudents = () => {
 
       if (editingStudent) {
         await api.put(`/students/${editingStudent.id}`, studentData);
-        toast.success('Student updated successfully');
+        toast.success(t('progress.update_success'));
       } else {
         const res = await api.post('/students', studentData);
         studentId = res.data.id;
-        toast.success('Student created successfully');
+        toast.success(t('students.create_success'));
       }
 
       // Handle Class Enrollment/Update
@@ -95,22 +98,22 @@ const TheoricStudents = () => {
       setEditingStudent(null);
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Action failed');
+      toast.error(error.response?.data?.message || t('classes.action_failed'));
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this student?')) return;
+    if (!window.confirm(t('students.delete_confirm'))) return;
     try {
       await api.delete(`/students/${id}`);
-      toast.success('Student deleted');
+      toast.success(t('students.delete_success'));
       fetchData();
     } catch (error) {
-      toast.error('Failed to delete student');
+      toast.error(t('students.delete_error'));
     }
   };
 
-  if (loading) return <div className="p-8">Loading Theoric students...</div>;
+  if (loading) return <div className="p-8">{t('students.loading_theoric')}</div>;
 
   // Grouping logic
   const groupedStudents = classes.map(cls => ({
@@ -124,8 +127,8 @@ const TheoricStudents = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Theoric Students</h1>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-gray-900">{t('students.theoric_title')}</h1>
         <button 
           onClick={() => {
             setEditingStudent(null);
@@ -134,39 +137,39 @@ const TheoricStudents = () => {
           }}
           className="btn-primary flex items-center gap-2"
         >
-          <Plus size={18} />
-          Add Student
+          <Plus size={18} className="me-1" />
+          {t('students.add_student')}
         </button>
       </div>
 
       <div className="space-y-8">
         {groupedStudents.map((group) => (
           <section key={group.id} className="space-y-4">
-            <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-              <Users size={20} className="text-secondary-600" />
+            <div className="flex items-center gap-2 border-b border-gray-200 pb-2 text-start">
+              <Users size={20} className="text-secondary-600 me-2" />
               <h2 className="text-lg font-bold text-gray-800">{group.class_name}</h2>
               <span className="text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">
-                {group.students.length} Students
+                {group.students.length} {t('common.students')}
               </span>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {group.students.map(student => (
-                <StudentCard key={student.id} student={student} onEdit={() => openEditModal(student)} onDelete={() => handleDelete(student.id)} />
+                <StudentCard key={student.id} student={student} onEdit={() => openEditModal(student)} onDelete={() => handleDelete(student.id)} navigate={navigate} t={t} />
               ))}
               {group.students.length === 0 && (
-                <p className="text-sm text-gray-400 italic col-span-full">No students enrolled in this class.</p>
+                <p className="text-sm text-gray-400 italic col-span-full text-start">{t('students.no_students_enrolled')}</p>
               )}
             </div>
           </section>
         ))}
 
         <section className="space-y-4 pt-4">
-          <div className="flex items-center gap-2 border-b border-orange-200 pb-2">
-            <GraduationCap size={20} className="text-orange-600" />
-            <h2 className="text-lg font-bold text-gray-800">Unassigned Students</h2>
+          <div className="flex items-center gap-2 border-b border-orange-200 pb-2 text-start">
+            <GraduationCap size={20} className="text-orange-600 me-2" />
+            <h2 className="text-lg font-bold text-gray-800">{t('students.unassigned_students')}</h2>
             <span className="text-xs font-medium px-2 py-0.5 bg-orange-50 text-orange-600 rounded-full">
-              {unassignedStudents.length} Students
+              {unassignedStudents.length} {t('common.students')}
             </span>
           </div>
           
@@ -178,10 +181,11 @@ const TheoricStudents = () => {
                 onEdit={openEditModal} 
                 onDelete={handleDelete}
                 navigate={navigate}
+                t={t}
               />
             ))}
             {unassignedStudents.length === 0 && (
-              <p className="text-sm text-gray-400 italic col-span-full">All students are assigned to theoric classes.</p>
+              <p className="text-sm text-gray-400 italic col-span-full text-start">{t('students.all_assigned_theoric')}</p>
             )}
           </div>
         </section>
@@ -198,44 +202,44 @@ const TheoricStudents = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-6">
-                  {editingStudent ? 'Edit Student' : 'Add New Student'}
+                <h3 className="text-lg font-bold text-gray-900 mb-6 text-start">
+                  {editingStudent ? t('students.edit_student_modal') : t('students.add_new_student')}
                 </h3>
                 <form onSubmit={handleSaveStudent} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Full Name</label>
-                    <input type="text" required className="mt-1 input-field" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                    <label className="block text-sm font-medium text-gray-700 text-start">{t('students.full_name')}</label>
+                    <input type="text" required className="mt-1 input-field text-start" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Contact Info</label>
-                      <input type="text" className="mt-1 input-field" value={formData.contact_info} onChange={(e) => setFormData({...formData, contact_info: e.target.value})} />
+                      <label className="block text-sm font-medium text-gray-700 text-start">{t('students.contact_info')}</label>
+                      <input type="text" className="mt-1 input-field text-start" value={formData.contact_info} onChange={(e) => setFormData({...formData, contact_info: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
-                      <input type="date" className="mt-1 input-field" value={formData.date_of_birth} onChange={(e) => setFormData({...formData, date_of_birth: e.target.value})} />
+                      <label className="block text-sm font-medium text-gray-700 text-start">{t('students.dob')}</label>
+                      <input type="date" className="mt-1 input-field text-start" value={formData.date_of_birth} onChange={(e) => setFormData({...formData, date_of_birth: e.target.value})} />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Parent/Guardian Info</label>
-                    <input type="text" className="mt-1 input-field" value={formData.parent_info} onChange={(e) => setFormData({...formData, parent_info: e.target.value})} />
+                    <label className="block text-sm font-medium text-gray-700 text-start">{t('students.parent_info')}</label>
+                    <input type="text" className="mt-1 input-field text-start" value={formData.parent_info} onChange={(e) => setFormData({...formData, parent_info: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Assign to Theoric Class</label>
-                    <select className="mt-1 input-field" value={formData.class_id} onChange={(e) => setFormData({...formData, class_id: e.target.value})}>
-                      <option value="">No Class (Unassigned)</option>
+                    <label className="block text-sm font-medium text-gray-700 text-start">{t('students.assign_theoric')}</label>
+                    <select className="mt-1 input-field text-start" value={formData.class_id} onChange={(e) => setFormData({...formData, class_id: e.target.value})}>
+                      <option value="">{t('students.no_class_unassigned')}</option>
                       {classes.map(c => (
                         <option key={c.id} value={c.id}>{c.class_name}</option>
                       ))}
                     </select>
                   </div>
                   
-                  <div className="mt-8 flex flex-row-reverse gap-3 border-t border-gray-100 pt-5">
+                  <div className="mt-8 flex gap-3 border-t border-gray-100 pt-5 flex-row-reverse">
                     <button type="submit" className="flex-1 px-4 py-2 bg-secondary-600 text-white rounded-xl hover:bg-secondary-700 font-medium transition-colors">
-                      {editingStudent ? 'Save Changes' : 'Create Student'}
+                      {editingStudent ? t('common.save') : t('students.save_student')}
                     </button>
                     <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 font-medium">
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                   </div>
                 </form>
@@ -248,19 +252,19 @@ const TheoricStudents = () => {
   );
 };
 
-const StudentCard = ({ student, onEdit, onDelete, navigate }) => {
+const StudentCard = ({ student, onEdit, onDelete, navigate, t }) => {
   const activeEnrollment = student.enrollments?.find(e => e.status === 'Active' && e.class?.type === 'Theory');
 
   return (
-    <div className="card p-6 flex items-center justify-between group transition-all hover:shadow-md">
+    <div className="card p-6 flex items-center justify-between group transition-all hover:shadow-md text-start">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-secondary-100 text-secondary-600 rounded-2xl flex items-center justify-center font-bold text-lg">
+        <div className="w-12 h-12 bg-secondary-100 text-secondary-600 rounded-2xl flex items-center justify-center font-bold text-lg shrink-0">
           {student.name.charAt(0)}
         </div>
-        <div>
+        <div className="text-start">
           <h3 className="font-bold text-gray-900">{student.name}</h3>
           <p className="text-xs text-gray-500">
-            {activeEnrollment ? activeEnrollment.class.class_name : 'Not Enrolled'}
+            {activeEnrollment ? activeEnrollment.class.class_name : t('students.not_enrolled')}
           </p>
         </div>
       </div>
@@ -269,14 +273,14 @@ const StudentCard = ({ student, onEdit, onDelete, navigate }) => {
           <button 
             onClick={() => navigate(`/teacher/progress/${activeEnrollment.id}`)}
             className="p-2 text-secondary-600 hover:bg-secondary-50 rounded-lg transition-colors"
-            title="View Growth Analytics"
+            title={t('students.view_analytics')}
           >
             <TrendingUp size={18} />
           </button>
         )}
         <button 
           onClick={() => onEdit(student)}
-          className="p-2 text-gray-400 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors"
+          className="p-2 text-gray-400 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors me-1"
         >
           <Edit2 size={18} />
         </button>

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import DashboardLayout from './components/DashboardLayout';
@@ -12,15 +13,24 @@ import TheoricStudents from './pages/admin/TheoricStudents';
 import Schedules from './pages/admin/Schedules';
 import Settings from './pages/admin/Settings';
 import Reports from './pages/admin/Reports';
+import AdminStatistics from './pages/admin/Statistics';
 import TeacherDashboard from './pages/TeacherDashboard';
 import TeacherClasses from './pages/teacher/TeacherClasses';
 import Attendance from './pages/teacher/Attendance';
 import QuranProgress from './pages/teacher/QuranProgress';
 import StudentProgress from './pages/teacher/StudentProgress';
+import TeacherStatistics from './pages/TeacherStatistics';
 
 // Placeholder Pages
-const Unauthorized = () => <div className="p-8"><h2>Unauthorized Access</h2></div>;
-const TheoryProgress = () => <div className="p-8"><h2>Theory Progress (Coming Soon)</h2></div>;
+const Unauthorized = () => {
+  const { t } = useTranslation();
+  return <div className="p-8"><h2>{t('common.unauthorized')}</h2></div>;
+};
+
+const TheoryProgress = () => {
+  const { t } = useTranslation();
+  return <div className="p-8"><h2>{t('common.theory_coming_soon')}</h2></div>;
+};
 
 function App() {
   const { user } = useAuth();
@@ -42,6 +52,7 @@ function App() {
             <Route path="/admin/schedules" element={<Schedules />} />
             <Route path="/admin/settings" element={<Settings />} />
             <Route path="/admin/reports" element={<Reports />} />
+            <Route path="/admin/statistics" element={<AdminStatistics />} />
           </Route>
         </Route>
 
@@ -53,6 +64,7 @@ function App() {
             <Route path="/teacher/quran/:classId" element={<QuranProgress />} />
             <Route path="/teacher/progress/:enrollmentId" element={<StudentProgress />} />
             <Route path="/teacher/theory/:classId" element={<TheoryProgress />} />
+            <Route path="/teacher/statistics" element={<TeacherStatistics />} />
           </Route>
         </Route>
 

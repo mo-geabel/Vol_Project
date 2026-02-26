@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle, XCircle, Search, Save } from 'lucide-react';
 import { format } from 'date-fns';
 
 const Attendance = () => {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -30,7 +33,7 @@ const Attendance = () => {
           setSelectedClass(classIdParam);
         }
       } catch (error) {
-        toast.error('Failed to load classes');
+        toast.error(t('attendance.load_classes_error'));
       }
     };
     fetchClasses();
@@ -48,7 +51,7 @@ const Attendance = () => {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!selectedClass || !date) return toast.error('Please select a class and date');
+    if (!selectedClass || !date) return toast.error(t('attendance.select_error'));
     
     setLoading(true);
     setOffDayMessage('');
@@ -78,7 +81,7 @@ const Attendance = () => {
 
           if (!isActive) {
             setLoading(false);
-            setOffDayMessage(`Attendance cannot be marked because ${format(dateObj, 'PPPP')} is set as an OFF day in the schedule.`);
+            setOffDayMessage(t('attendance.off_day_msg', { date: format(dateObj, 'PPPP') }));
             return;
           }
         }
@@ -106,7 +109,7 @@ const Attendance = () => {
       
       setStudentsConfig(mapped);
     } catch (error) {
-      toast.error('Failed to load attendance info');
+      toast.error(t('attendance.load_error'));
     } finally {
       setLoading(false);
     }
@@ -131,9 +134,9 @@ const Attendance = () => {
       };
 
       await api.post('/attendance', payload);
-      toast.success('Attendance successfully saved');
+      toast.success(t('attendance.save_success'));
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to save attendance');
+      toast.error(error.response?.data?.message || t('attendance.save_error'));
     } finally {
       setSaving(false);
     }
@@ -142,27 +145,27 @@ const Attendance = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Mark Attendance</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('attendance.title')}</h1>
       </div>
 
       <div className="card p-6 border border-gray-100">
         <form onSubmit={handleSearch} className="flex flex-col sm:flex-row items-end gap-4">
           <div className="w-full sm:w-1/3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Select Class</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('attendance.select_class')}</label>
             <select required className="input-field" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
-              <option value="" disabled>Choose a class...</option>
+              <option value="" disabled>{t('attendance.placeholder_class')}</option>
               {classes.map(c => (
                 <option key={c.id} value={c.id}>{c.class_name}</option>
               ))}
             </select>
           </div>
           <div className="w-full sm:w-1/3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('attendance.date')}</label>
             <input type="date" required className="input-field" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
-          <button type="submit" disabled={loading} className="btn-primary w-full sm:w-auto h-10 mt-auto">
-            <Search size={18} className="mr-2" />
-            {loading ? 'Loading...' : 'Load Register'}
+          <button type="submit" disabled={loading} className="btn-primary w-full sm:w-auto h-10 mt-auto flex items-center justify-center">
+            <Search size={18} className="margin-inline-end-2" />
+            {loading ? t('attendance.loading') : t('attendance.load_register')}
           </button>
         </form>
       </div>
@@ -173,7 +176,7 @@ const Attendance = () => {
             <XCircle className="text-orange-600" size={24} />
           </div>
           <p className="text-orange-800 font-medium">{offDayMessage}</p>
-          <p className="text-sm text-orange-600 mt-1">If this is a mistake, please contact the admin.</p>
+          <p className="text-sm text-orange-600 mt-1">{t('attendance.contact_admin_hint')}</p>
         </div>
       )}
 
@@ -181,22 +184,22 @@ const Attendance = () => {
         <div className="card shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-4 py-5 sm:px-6 bg-gray-50 flex justify-between items-center border-b border-gray-200">
             <h3 className="text-lg leading-6 font-medium text-gray-900">
-              Student Register
+              {t('attendance.register_title')}
             </h3>
             <button 
               onClick={handleSave} 
               disabled={saving}
-              className="btn-primary bg-secondary-600 hover:bg-secondary-700 focus:ring-secondary-500 py-1.5 px-3"
+              className="btn-primary bg-secondary-600 hover:bg-secondary-700 focus:ring-secondary-500 py-1.5 px-3 flex items-center"
             >
-              <Save size={16} className="mr-2" />
-              {saving ? 'Saving...' : 'Save All'}
+              <Save size={16} className="margin-inline-end-2" />
+              {saving ? t('attendance.saving') : t('attendance.save_all')}
             </button>
           </div>
           <ul className="divide-y divide-gray-200">
             {studentsConfig.map((student, index) => (
               <li key={student.enrollment_id} className="px-4 py-4 sm:px-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
                 <div className="text-sm font-medium text-gray-900">{student.student_name}</div>
-                <div className="w-32">
+                <div className="w-40 sm:w-32">
                   <select
                     value={student.status}
                     onChange={(e) => updateAttendanceStatus(index, e.target.value)}
@@ -205,9 +208,9 @@ const Attendance = () => {
                         student.status === 'Absent' ? 'bg-red-600 hover:bg-red-700' : 
                         'bg-orange-500 hover:bg-orange-600'}`}
                   >
-                    <option value="Present" className="bg-white text-gray-900">Present</option>
-                    <option value="Absent" className="bg-white text-gray-900">Absent</option>
-                    <option value="Excused" className="bg-white text-gray-900">Excused</option>
+                    <option value="Present" className="bg-white text-gray-900">{t('attendance.present')}</option>
+                    <option value="Absent" className="bg-white text-gray-900">{t('attendance.absent')}</option>
+                    <option value="Excused" className="bg-white text-gray-900">{t('attendance.excused')}</option>
                   </select>
                 </div>
               </li>
@@ -217,7 +220,7 @@ const Attendance = () => {
       )}
       {!offDayMessage && selectedClass && !loading && studentsConfig.length === 0 && (
         <div className="p-8 text-center text-gray-500 card">
-          Click "Load Register" to see students for this date.
+          {t('attendance.load_hint')}
         </div>
       )}
     </div>

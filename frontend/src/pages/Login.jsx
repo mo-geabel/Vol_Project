@@ -3,8 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { BookOpen } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Login = () => {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,10 +43,10 @@ const Login = () => {
             <BookOpen size={32} />
           </div>
           <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900 tracking-tight">
-            MEMS portal
+            {t('login.title')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-500">
-            Mosque Educational Management System
+            {t('login.subtitle')}
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -58,7 +60,7 @@ const Login = () => {
                 autoComplete="username"
                 required
                 className="input-field"
-                placeholder="Username"
+                placeholder={t('login.username')}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -72,7 +74,7 @@ const Login = () => {
                 autoComplete="current-password"
                 required
                 className="input-field"
-                placeholder="Password"
+                placeholder={t('login.password')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -88,7 +90,7 @@ const Login = () => {
               <span className="absolute left-0 inset-y-0 flex items-center pl-3">
                 {/* Optional icon */}
               </span>
-              {loading ? 'Signing in...' : 'Sign in'}
+              {loading ? t('login.signing_in') : t('login.sign_in')}
             </button>
           </div>
         </form>

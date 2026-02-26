@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
 import { Plus, Trash2, Edit, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Users = () => {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -18,7 +21,7 @@ const Users = () => {
       const res = await api.get('/users');
       setUsers(res.data);
     } catch (error) {
-      toast.error('Failed to load users');
+      toast.error(t('users.load_error'));
     } finally {
       setLoading(false);
     }
@@ -34,11 +37,11 @@ const Users = () => {
       if (editingUser) {
         // Update mode
         await api.put(`/users/${editingUser}`, formData);
-        toast.success('User updated successfully');
+        toast.success(t('users.update_success'));
       } else {
         // Create mode
         await api.post('/auth/register', formData);
-        toast.success('User created successfully');
+        toast.success(t('users.create_success'));
       }
       handleCloseModal();
       fetchUsers();
@@ -68,12 +71,12 @@ const Users = () => {
     setIsDeleting(true);
     try {
       await api.delete(`/users/${userToDelete.id}`);
-      toast.success('User deleted successfully');
+      toast.success(t('users.delete_success'));
       fetchUsers();
       setShowDeleteModal(false);
       setUserToDelete(null);
     } catch (error) {
-      toast.error('Failed to delete user');
+      toast.error(t('users.load_error')); // Assuming generic error for now
     } finally {
       setIsDeleting(false);
     }
@@ -85,18 +88,18 @@ const Users = () => {
     setFormData({ name: '', username: '', password: '', role: 'teacher' });
   };
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading users...</div>;
+  if (loading) return <div className="p-8 text-center text-gray-500">{t('users.loading')}</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 font-display">User Management</h1>
+        <h1 className="text-2xl font-bold text-gray-900 font-display">{t('users.title')}</h1>
         <button 
           onClick={() => setShowModal(true)}
           className="btn-primary flex items-center gap-2 group"
         >
           <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
-          Add User
+          {t('users.add_user')}
         </button>
       </div>
 
@@ -105,10 +108,10 @@ const Users = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-widest">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-widest">Username</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-widest">Role</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-widest">Actions</th>
+                <th className="px-6 py-3 text-start text-xs font-semibold text-gray-400 uppercase tracking-widest">{t('common.name')}</th>
+                <th className="px-6 py-3 text-start text-xs font-semibold text-gray-400 uppercase tracking-widest">{t('common.username')}</th>
+                <th className="px-6 py-3 text-start text-xs font-semibold text-gray-400 uppercase tracking-widest">{t('common.role')}</th>
+                <th className="px-6 py-3 text-end text-xs font-semibold text-gray-400 uppercase tracking-widest">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100 italic-last-td">
@@ -116,7 +119,7 @@ const Users = () => {
                 <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold mr-3 text-xs">
+                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold margin-inline-end-3 text-xs">
                         {user.name.charAt(0).toUpperCase()}
                       </div>
                       <span className="text-sm font-medium text-gray-900">{user.name}</span>
@@ -130,11 +133,11 @@ const Users = () => {
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                  <td className="px-6 py-4 whitespace-nowrap text-end text-sm font-medium flex gap-2 justify-end">
                     <button 
                       onClick={() => handleEdit(user)} 
                       className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all active:scale-90"
-                      title="Edit User"
+                      title={t('common.edit')}
                     >
                       <Edit size={18} />
                     </button>
@@ -153,7 +156,7 @@ const Users = () => {
                   <td colSpan="4" className="px-6 py-12 text-center text-sm text-gray-400">
                     <div className="flex flex-col items-center gap-2">
                       <Users size={40} className="text-gray-200" />
-                      No users found.
+                      {t('users.no_users')}
                     </div>
                   </td>
                 </tr>
@@ -176,7 +179,7 @@ const Users = () => {
               <div className="bg-white p-6 sm:p-8">
                 <div className="flex items-center justify-between mb-8">
                   <h3 className="text-xl font-bold text-gray-900" id="modal-title">
-                    {editingUser ? 'Edit User' : 'Add New User'}
+                    {editingUser ? t('users.edit_user') : t('users.add_new_user')}
                   </h3>
                   <button onClick={handleCloseModal} className="p-2 hover:bg-gray-100 rounded-full text-gray-400">
                     <Plus size={20} className="rotate-45" />
@@ -185,7 +188,7 @@ const Users = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Full Name</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5 margin-inline-start-1">{t('users.full_name')}</label>
                     <input 
                       type="text" 
                       required 
@@ -196,7 +199,7 @@ const Users = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Username</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5 margin-inline-start-1">{t('common.username')}</label>
                     <input 
                       type="text" 
                       required 
@@ -207,32 +210,32 @@ const Users = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">
-                      {editingUser ? 'New Password (optional)' : 'Password'}
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5 margin-inline-start-1">
+                      {editingUser ? t('users.new_password') : t('users.password')}
                     </label>
                     <input 
                       type="password" 
                       required={!editingUser}
                       className="input-field" 
-                      placeholder={editingUser ? '••••••••' : 'Password'}
+                      placeholder={editingUser ? '••••••••' : t('users.password')}
                       value={formData.password} 
                       onChange={(e) => setFormData({...formData, password: e.target.value})} 
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Access Role</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5 margin-inline-start-1">{t('users.access_role')}</label>
                     <select className="input-field" value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>
-                      <option value="teacher">Teacher (Class Access)</option>
-                      <option value="admin">Admin (Full Control)</option>
+                      <option value="teacher">{t('users.teacher_role')}</option>
+                      <option value="admin">{t('users.admin_role')}</option>
                     </select>
                   </div>
                   
                   <div className="flex gap-3 pt-6">
                     <button type="submit" className="flex-1 btn-primary py-3 rounded-2xl font-bold">
-                      {editingUser ? 'Save Changes' : 'Create User'}
+                      {editingUser ? t('common.save') : t('users.add_user')}
                     </button>
                     <button type="button" onClick={handleCloseModal} className="px-6 py-3 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-colors">
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                   </div>
                 </form>
@@ -256,10 +259,9 @@ const Users = () => {
                   <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center text-red-600 mb-6">
                     <AlertCircle size={32} />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Delete User?</h3>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{t('users.delete_title')}</h3>
                   <p className="text-gray-500 mb-8">
-                    Are you sure you want to delete <span className="font-semibold text-gray-900">"{userToDelete?.name}"</span>? 
-                    This action cannot be undone and will remove all their access.
+                    {t('users.delete_confirm', { name: userToDelete?.name })}
                   </p>
                 </div>
 
@@ -274,14 +276,14 @@ const Users = () => {
                     ) : (
                       <Trash2 size={18} />
                     )}
-                    {isDeleting ? 'Deleting...' : 'Yes, Delete User'}
+                    {isDeleting ? t('users.deleting') : t('users.yes_delete')}
                   </button>
                   <button 
                     onClick={() => setShowDeleteModal(false)}
                     disabled={isDeleting}
                     className="px-6 py-3 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                 </div>
               </div>

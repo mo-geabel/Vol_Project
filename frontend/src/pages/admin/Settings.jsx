@@ -11,8 +11,11 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Settings = () => {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
@@ -30,7 +33,7 @@ const Settings = () => {
       setSettings(res.data);
     } catch (error) {
       console.error('Error fetching settings:', error);
-      toast.error('Failed to load settings');
+      toast.error(t('settings.load_error'));
     } finally {
       setLoading(false);
     }
@@ -53,10 +56,10 @@ const Settings = () => {
     setSaving(true);
     try {
       await api.post('/settings', settings);
-      toast.success('Settings updated successfully');
+      toast.success(t('settings.save_success'));
     } catch (error) {
       console.error('Error updating settings:', error);
-      toast.error('Failed to update settings');
+      toast.error(t('settings.save_error'));
     } finally {
       setSaving(false);
     }
@@ -75,9 +78,9 @@ const Settings = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <SettingsIcon className="text-secondary-600" />
-          System Settings
+          {t('settings.title')}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">Configure global parameters and mosque information.</p>
+        <p className="text-sm text-gray-500 mt-1">{t('settings.subtitle')}</p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-8">
@@ -85,67 +88,67 @@ const Settings = () => {
         <div className="card p-6 border border-gray-100 shadow-sm bg-white">
           <div className="flex items-center gap-2 mb-6 border-b border-gray-50 pb-4">
             <Building2 className="text-primary-600" size={20} />
-            <h2 className="text-lg font-bold text-gray-800">General Information</h2>
+            <h2 className="text-lg font-bold text-gray-800">{t('settings.general_info')}</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="col-span-full">
-              <label className="label">Mosque Name</label>
+              <label className="label">{t('settings.mosque_name')}</label>
               <div className="relative">
                 <input
                   type="text"
                   name="mosqueName"
                   value={settings.mosqueName}
                   onChange={handleChange}
-                  className="input pl-10"
-                  placeholder="e.g. Al-Fursan Islamic Center"
+                  className="input padding-inline-start-10"
+                  placeholder={t('settings.mosque_name_placeholder')}
                   required
                 />
-                <Building2 className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                <Building2 className="absolute inset-inline-start-3 top-2.5 text-gray-400" size={18} />
               </div>
             </div>
 
             <div>
-              <label className="label">Contact Phone</label>
+              <label className="label">{t('settings.phone')}</label>
               <div className="relative">
                 <input
                   type="text"
                   name="mosquePhone"
                   value={settings.mosquePhone}
                   onChange={handleChange}
-                  className="input pl-10"
-                  placeholder="+123 456 789"
+                  className="input padding-inline-start-10"
+                  placeholder={t('settings.phone_placeholder')}
                 />
-                <Phone className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                <Phone className="absolute inset-inline-start-3 top-2.5 text-gray-400" size={18} />
               </div>
             </div>
 
             <div>
-              <label className="label">Academic Year</label>
+              <label className="label">{t('settings.academic_year')}</label>
               <div className="relative">
                 <input
                   type="text"
                   name="academicYearStart"
                   value={settings.academicYearStart}
                   onChange={handleChange}
-                  className="input pl-10"
-                  placeholder="2025-2026"
+                  className="input padding-inline-start-10"
+                  placeholder={t('settings.academic_year_placeholder')}
                 />
-                <Calendar className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                <Calendar className="absolute inset-inline-start-3 top-2.5 text-gray-400" size={18} />
               </div>
             </div>
 
             <div className="col-span-full">
-              <label className="label">Address</label>
+              <label className="label">{t('settings.address')}</label>
               <div className="relative">
                 <textarea
                   name="mosqueAddress"
                   value={settings.mosqueAddress}
                   onChange={handleChange}
-                  className="input pl-10 py-2 h-24 resize-none"
-                  placeholder="Street name, City, Zip Code"
+                  className="input padding-inline-start-10 py-2 h-24 resize-none"
+                  placeholder={t('settings.address_placeholder')}
                 />
-                <MapPin className="absolute left-3 top-3 text-gray-400" size={18} />
+                <MapPin className="absolute inset-inline-start-3 top-3 text-gray-400" size={18} />
               </div>
             </div>
           </div>
@@ -155,22 +158,22 @@ const Settings = () => {
         <div className="card p-6 border border-gray-100 shadow-sm bg-white">
           <div className="flex items-center gap-2 mb-6 border-b border-gray-50 pb-4">
             <ShieldCheck className="text-secondary-600" size={20} />
-            <h2 className="text-lg font-bold text-gray-800">Academic & Attendance Rules</h2>
+            <h2 className="text-lg font-bold text-gray-800">{t('settings.rules_title')}</h2>
           </div>
 
           <div className="space-y-6">
             <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
               <AlertCircle className="text-amber-600 shrink-0" size={20} />
               <div>
-                <p className="text-sm font-semibold text-amber-800">Automatic Enforcement</p>
+                <p className="text-sm font-semibold text-amber-800">{t('settings.auto_enforcement')}</p>
                 <p className="text-xs text-amber-700 mt-1">
-                  Students whose attendance falls below this threshold will be automatically flagged or disabled according to the "60% Rule".
+                  {t('settings.auto_enforcement_desc')}
                 </p>
               </div>
             </div>
 
             <div className="max-w-xs">
-              <label className="label">Attendance Threshold (%)</label>
+              <label className="label">{t('settings.threshold_label')}</label>
               <div className="flex items-center gap-4">
                 <input
                   type="range"
@@ -198,12 +201,12 @@ const Settings = () => {
             {saving ? (
               <span className="flex items-center gap-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Saving...
+                {t('settings.saving')}
               </span>
             ) : (
               <>
                 <Save size={20} />
-                Save All Changes
+                {t('common.save')}
               </>
             )}
           </button>

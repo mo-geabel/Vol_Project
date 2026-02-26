@@ -15,6 +15,7 @@ import {
   Phone,
   User2
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import {
   LineChart,
@@ -32,6 +33,8 @@ import {
 } from 'recharts';
 
 const StudentProgress = () => {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const { enrollmentId } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
@@ -55,7 +58,7 @@ const StudentProgress = () => {
         setData(res.data);
       } catch (error) {
         console.error('Error fetching student progress:', error);
-        toast.error('Failed to load student history');
+        toast.error(t('student_history.load_error'));
       } finally {
         setLoading(false);
       }
@@ -64,8 +67,8 @@ const StudentProgress = () => {
     fetchStudentData();
   }, [enrollmentId]);
 
-  if (loading) return <div className="p-8 text-center text-primary-600 font-medium">Loading student history...</div>;
-  if (!data) return <div className="p-8 text-center">Student history not found</div>;
+  if (loading) return <div className="p-8 text-center text-primary-600 font-medium">{t('student_history.loading')}</div>;
+  if (!data) return <div className="p-8 text-center">{t('student_history.not_found')}</div>;
 
   const { enrollment, quran, attendance } = data;
 
@@ -156,8 +159,10 @@ const StudentProgress = () => {
   });
 
   const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    t('common.months.jan'), t('common.months.feb'), t('common.months.mar'),
+    t('common.months.apr'), t('common.months.may'), t('common.months.jun'),
+    t('common.months.jul'), t('common.months.aug'), t('common.months.sep'),
+    t('common.months.oct'), t('common.months.nov'), t('common.months.dec')
   ];
 
   return (
@@ -168,7 +173,7 @@ const StudentProgress = () => {
           <div className="flex items-center gap-3 sm:gap-4">
             <button 
               onClick={() => navigate(-1)}
-              className="p-2 sm:p-2.5 hover:bg-gray-50 rounded-xl sm:rounded-2xl transition-all text-gray-400 hover:text-primary-600 border border-transparent hover:border-primary-100 shadow-xs active:scale-95"
+              className={`p-2 sm:p-2.5 hover:bg-gray-50 rounded-xl sm:rounded-2xl transition-all text-gray-400 hover:text-primary-600 border border-transparent hover:border-primary-100 shadow-xs active:scale-95 ${isRTL ? 'rotate-180' : ''}`}
             >
               <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
             </button>
@@ -179,7 +184,7 @@ const StudentProgress = () => {
                 </h1>
                 {enrollment.student.date_of_birth && (
                   <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">
-                    {calculateAge(enrollment.student.date_of_birth)} Years Old
+                    {t('student_history.years_old', { age: calculateAge(enrollment.student.date_of_birth) })}
                   </span>
                 )}
               </div>
@@ -195,42 +200,42 @@ const StudentProgress = () => {
                   </div>
                 )}
                 {enrollment.student.parent_info && (
-                  <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold">
+                  <div className={`flex items-center gap-1.5 text-[10px] text-gray-400 font-bold ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <User2 size={12} className="text-primary-400" />
-                    <span>Parent: {enrollment.student.parent_info}</span>
+                    <span>{t('student_history.parent_details')}: {enrollment.student.parent_info}</span>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-gray-100/50 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border border-gray-100 self-start sm:self-auto overflow-x-auto no-scrollbar max-w-full">
+          <div className={`flex items-center gap-1.5 sm:gap-2 bg-gray-100/50 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border border-gray-100 self-start sm:self-auto overflow-x-auto no-scrollbar max-w-full ${isRTL ? 'flex-row-reverse' : ''}`}>
             <button 
               onClick={() => setFilterMode('Overall')}
               className={`whitespace-nowrap px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${filterMode === 'Overall' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              All Time
+              {t('student_history.all_time')}
             </button>
             <button 
               onClick={() => setFilterMode('Monthly')}
               className={`whitespace-nowrap px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${filterMode === 'Monthly' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              Monthly
+              {t('student_history.monthly')}
             </button>
             
             {filterMode === 'Monthly' && (
-              <div className="flex items-center gap-1 border-l border-gray-200 ml-1.5 sm:ml-2 pl-1.5 sm:pl-2">
+              <div className={`flex items-center gap-1 ${isRTL ? 'border-r pr-1.5 sm:pr-2 mr-1.5 sm:mr-2' : 'border-l pl-1.5 sm:pl-2 ml-1.5 sm:ml-2'} border-gray-200`}>
                 <select 
                   value={selectedMonth} 
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="bg-transparent border-none text-[10px] sm:text-xs font-black text-gray-700 focus:ring-0 cursor-pointer appearance-none py-1"
+                  className={`bg-transparent border-none text-[10px] sm:text-xs font-black text-gray-700 focus:ring-0 cursor-pointer appearance-none py-1 ${isRTL ? 'text-right' : 'text-left'}`}
                 >
                   {months.map((m, i) => <option key={m} value={i}>{m.slice(0, 3)}</option>)}
                 </select>
                 <select 
                   value={selectedYear} 
                   onChange={(e) => setSelectedYear(e.target.value)}
-                  className="bg-transparent border-none text-[10px] sm:text-xs font-black text-gray-700 focus:ring-0 cursor-pointer appearance-none py-1"
+                  className={`bg-transparent border-none text-[10px] sm:text-xs font-black text-gray-700 focus:ring-0 cursor-pointer appearance-none py-1 ${isRTL ? 'text-right' : 'text-left'}`}
                 >
                   {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
@@ -244,18 +249,18 @@ const StudentProgress = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Hifz card */}
         <div className="card p-5 sm:p-6 border-t-4 border-amber-500">
-          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4">
-            <Star size={14} className="text-amber-500" /> Hifz Avg
+          <h3 className={`text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <Star size={14} className="text-amber-500" /> {t('student_history.hifz_avg')}
           </h3>
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase">Overall</p>
+          <div className={`flex items-end justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-[10px] font-bold text-gray-400 uppercase">{t('student_history.overall')}</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl sm:text-3xl font-black text-gray-900">{overallStats.hifzAvg}</span>
               </div>
             </div>
             {filterMode === 'Monthly' && (
-              <div className="text-right">
+              <div className={isRTL ? 'text-left' : 'text-right'}>
                 <p className="text-[10px] font-bold text-gray-400 uppercase">{months[selectedMonth].slice(0, 3)}</p>
                 <span className={`text-lg sm:text-xl font-black ${Number(monthlyStats.hifzAvg) >= Number(overallStats.hifzAvg) ? 'text-green-600' : 'text-amber-600'}`}>
                   {monthlyStats.hifzAvg}
@@ -267,18 +272,18 @@ const StudentProgress = () => {
 
         {/* Muraja card */}
         <div className="card p-5 sm:p-6 border-t-4 border-blue-500">
-          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4">
-            <BookOpen size={14} className="text-blue-500" /> Muraja Avg
+          <h3 className={`text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <BookOpen size={14} className="text-blue-500" /> {t('student_history.muraja_avg')}
           </h3>
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase">Overall</p>
+          <div className={`flex items-end justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-[10px] font-bold text-gray-400 uppercase">{t('student_history.overall')}</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl sm:text-3xl font-black text-gray-900">{overallStats.murajaAvg}</span>
               </div>
             </div>
             {filterMode === 'Monthly' && (
-              <div className="text-right">
+              <div className={isRTL ? 'text-left' : 'text-right'}>
                 <p className="text-[10px] font-bold text-gray-400 uppercase">{months[selectedMonth].slice(0, 3)}</p>
                 <span className={`text-lg sm:text-xl font-black ${Number(monthlyStats.murajaAvg) >= Number(overallStats.murajaAvg) ? 'text-green-600' : 'text-blue-600'}`}>
                   {monthlyStats.murajaAvg}
@@ -290,18 +295,18 @@ const StudentProgress = () => {
 
         {/* Attendance card */}
         <div className="card p-5 sm:p-6 border-t-4 border-primary-500">
-          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4">
-            <CheckCircle2 size={14} className="text-primary-500" /> Attendance
+          <h3 className={`text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <CheckCircle2 size={14} className="text-primary-500" /> {t('student_history.attendance')}
           </h3>
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase">All-Time</p>
+          <div className={`flex items-end justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-[10px] font-bold text-gray-400 uppercase">{t('student_history.all_time')}</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl sm:text-3xl font-black text-gray-900">{overallStats.attendanceRate}%</span>
               </div>
             </div>
             {filterMode === 'Monthly' && (
-              <div className="text-right">
+              <div className={isRTL ? 'text-left' : 'text-right'}>
                 <p className="text-[10px] font-bold text-gray-400 uppercase">{months[selectedMonth].slice(0, 3)}</p>
                 <span className={`text-lg sm:text-xl font-black ${monthlyStats.attendanceRate >= overallStats.attendanceRate ? 'text-green-600' : 'text-red-600'}`}>
                   {monthlyStats.attendanceRate}%
@@ -313,21 +318,21 @@ const StudentProgress = () => {
 
         {/* Total logs */}
         <div className="card p-5 sm:p-6 border-t-4 border-gray-300">
-          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4">
-            <History size={14} className="text-gray-400" /> Logs
+          <h3 className={`text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <History size={14} className="text-gray-400" /> {t('student_history.logs')}
           </h3>
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase">Total</p>
+          <div className={`flex items-end justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-[10px] font-bold text-gray-400 uppercase">{t('common.total')}</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl sm:text-3xl font-black text-gray-900">
                   {filterMode === 'Monthly' ? monthlyStats.total : overallStats.total}
                 </span>
               </div>
             </div>
-            <div className="text-right">
+            <div className={isRTL ? 'text-left' : 'text-right'}>
               <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 px-2 py-1 bg-gray-50 rounded-lg">
-                {filterMode === 'Monthly' ? 'This Month' : 'Lifetime'}
+                {filterMode === 'Monthly' ? t('student_history.this_month') : t('student_history.lifetime')}
               </span>
             </div>
           </div>
@@ -337,8 +342,8 @@ const StudentProgress = () => {
       {/* Main Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card p-5 sm:p-8">
-          <h3 className="text-xs sm:text-sm font-black text-gray-900 uppercase tracking-widest mb-6 sm:mb-8 flex items-center gap-2">
-            <TrendingUp size={18} className="text-primary-600" /> Performance History
+          <h3 className={`text-xs sm:text-sm font-black text-gray-900 uppercase tracking-widest mb-6 sm:mb-8 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <TrendingUp size={18} className="text-primary-600" /> {t('student_history.performance_history')}
           </h3>
           <div className="h-[250px] sm:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -367,18 +372,18 @@ const StudentProgress = () => {
                   tick={{fill: '#9ca3af', fontSize: 10, fontWeight: 700}}
                 />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', textAlign: 'start' }}
                 />
-                <Area data={hifzChart} type="monotone" dataKey="rating" stroke="#f59e0b" strokeWidth={3} fill="url(#colorHifz)" name="Hifz" />
-                <Area data={murajaChart} type="monotone" dataKey="rating" stroke="#3b82f6" strokeWidth={3} fill="url(#colorMuraja)" name="Muraja" />
+                <Area data={hifzChart} type="monotone" dataKey="rating" stroke="#f59e0b" strokeWidth={3} fill="url(#colorHifz)" name={t('common.hifz')} />
+                <Area data={murajaChart} type="monotone" dataKey="rating" stroke="#3b82f6" strokeWidth={3} fill="url(#colorMuraja)" name={t('common.muraja')} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="card p-5 sm:p-8">
-          <h3 className="text-xs sm:text-sm font-black text-gray-900 uppercase tracking-widest mb-6 sm:mb-8 flex items-center gap-2">
-            <Calendar size={18} className="text-primary-600" /> Attendance Presence
+          <h3 className={`text-xs sm:text-sm font-black text-gray-900 uppercase tracking-widest mb-6 sm:mb-8 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <Calendar size={18} className="text-primary-600" /> {t('student_history.attendance_presence')}
           </h3>
           <div className="h-[250px] sm:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -396,10 +401,10 @@ const StudentProgress = () => {
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="bg-white p-3 rounded-xl shadow-lg border border-gray-50">
+                        <div className="bg-white p-3 rounded-xl shadow-lg border border-gray-50 text-start">
                           <p className="text-[10px] font-black text-gray-400 mb-1">{payload[0].payload.fullDate}</p>
                           <span className={`text-xs font-black ${payload[0].value === 1 ? 'text-green-600' : 'text-red-600'}`}>
-                            {payload[0].value === 1 ? 'PRESENT' : 'ABSENT'}
+                            {payload[0].value === 1 ? t('common.present').toUpperCase() : t('common.absent').toUpperCase()}
                           </span>
                         </div>
                       );
@@ -421,51 +426,51 @@ const StudentProgress = () => {
       {/* Activity Log Section */}
       <div className="card overflow-hidden">
         <div className="p-5 sm:p-8 border-b border-gray-100 bg-white">
-          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
-            <h3 className="text-lg sm:text-xl font-black text-gray-900 flex items-center gap-3">
+          <div className={`flex flex-col xl:flex-row xl:items-center justify-between gap-6 ${isRTL ? 'xl:flex-row-reverse' : ''}`}>
+            <h3 className={`text-lg sm:text-xl font-black text-gray-900 flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
               <History size={24} className="text-primary-600" />
-              Activity Log
+              {t('student_history.activity_log')}
             </h3>
             
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto">
+            <div className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
               {/* Type Switches */}
-              <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl sm:rounded-2xl border border-gray-100 overflow-x-auto no-scrollbar max-w-full">
-                {['All', 'Hifz', 'Muraja', 'Unprepared'].map(t => (
+              <div className={`flex items-center gap-1 bg-gray-50 p-1 rounded-xl sm:rounded-2xl border border-gray-100 overflow-x-auto no-scrollbar max-w-full ${isRTL ? 'flex-row-reverse' : ''}`}>
+                {['All', 'Hifz', 'Muraja', 'Unprepared'].map(tType => (
                   <button 
-                    key={t}
-                    onClick={() => setLogTypeFilter(t)}
-                    className={`whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${logTypeFilter === t ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    key={tType}
+                    onClick={() => setLogTypeFilter(tType)}
+                    className={`whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${logTypeFilter === tType ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                   >
-                    {t}
+                    {t(`student_history.filter_${tType.toLowerCase()}`)}
                   </button>
                 ))}
               </div>
 
               {/* Time Level Filter */}
-              <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl sm:rounded-2xl border border-gray-100 overflow-x-auto no-scrollbar max-w-full">
+              <div className={`flex items-center gap-1 bg-gray-50 p-1 rounded-xl sm:rounded-2xl border border-gray-100 overflow-x-auto no-scrollbar max-w-full ${isRTL ? 'flex-row-reverse' : ''}`}>
                 {['AllTime', 'Current', 'Custom'].map(mode => (
                   <button 
                     key={mode}
                     onClick={() => setLogTimeMode(mode)}
                     className={`whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${logTimeMode === mode ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                   >
-                    {mode === 'AllTime' ? 'All Time' : mode}
+                    {t(`student_history.time_${mode.toLowerCase()}`)}
                   </button>
                 ))}
 
                 {logTimeMode === 'Custom' && (
-                  <div className="flex items-center gap-1 border-l border-gray-200 ml-2 pl-2">
+                  <div className={`flex items-center gap-1 border-gray-200 ${isRTL ? 'border-r pr-2 mr-2' : 'border-l pl-2 ml-2'}`}>
                     <select 
                       value={logMonthFilter} 
                       onChange={(e) => setLogMonthFilter(e.target.value)}
-                      className="bg-transparent border-none text-[10px] font-black text-gray-700 focus:ring-0 cursor-pointer p-0 px-1"
+                      className={`bg-transparent border-none text-[10px] font-black text-gray-700 focus:ring-0 cursor-pointer p-0 px-1 ${isRTL ? 'text-right' : 'text-left'}`}
                     >
                       {months.map((m, i) => <option key={m} value={i}>{m.slice(0, 3)}</option>)}
                     </select>
                     <select 
                       value={logYearFilter} 
                       onChange={(e) => setLogYearFilter(e.target.value)}
-                      className="bg-transparent border-none text-[10px] font-black text-gray-700 focus:ring-0 cursor-pointer p-0 px-1"
+                      className={`bg-transparent border-none text-[10px] font-black text-gray-700 focus:ring-0 cursor-pointer p-0 px-1 ${isRTL ? 'text-right' : 'text-left'}`}
                     >
                       {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
@@ -485,8 +490,8 @@ const StudentProgress = () => {
               
               return (
                 <div key={record.id} className="py-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
+                  <div className={`flex items-start justify-between mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <div className={isRTL ? 'text-right' : 'text-left'}>
                       <div className="text-sm font-black text-gray-900">{format(new Date(record.date), 'MMM dd, yyyy')}</div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase">{format(new Date(record.date), 'EEEE')}</div>
                     </div>
@@ -494,22 +499,23 @@ const StudentProgress = () => {
                       <span className={`px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
                         att.status === 'Present' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
                       }`}>
-                        {att.status}
+                        {att.status === 'Present' ? t('student_history.present') : t('student_history.absent')}
                       </span>
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-3">
+                  <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
                       isNotPrep ? 'bg-red-50 text-red-600' :
                       record.type === 'Hifz' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
                     }`}>
-                      {record.type.replace('NotPrepared', 'Unprepared')}
+                      {isNotPrep ? t('student_history.filter_unprepared') : 
+                       record.type === 'Hifz' ? t('common.hifz') : t('common.muraja')}
                     </span>
                     
                     {!isNotPrep && (
-                      <div className="text-xs font-bold text-gray-700 flex-1">
-                        Surah {record.surah_id} <span className="text-gray-400 font-medium ml-1">({record.start_verse}-{record.end_verse})</span>
+                      <div className={`text-xs font-bold text-gray-700 flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                        {t('student_history.surah_verses', { id: record.surah_id, start: record.start_verse, end: record.end_verse })}
                       </div>
                     )}
                     
@@ -526,21 +532,21 @@ const StudentProgress = () => {
               );
             })}
             {filteredLog.length === 0 && (
-              <div className="py-12 text-center text-sm font-bold text-gray-400 italic">No records found.</div>
+              <div className="py-12 text-center text-sm font-bold text-gray-400 italic">{t('student_history.no_records')}</div>
             )}
           </div>
         </div>
 
         {/* Desktop Table (Hidden on mobile) */}
         <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full">
             <thead>
-              <tr className="bg-gray-50/50 text-gray-400 text-[10px] font-black uppercase tracking-widest">
-                <th className="px-8 py-5">Date</th>
-                <th className="px-8 py-5">Activity</th>
-                <th className="px-8 py-5">Recitation</th>
-                <th className="px-8 py-5 text-center">Rating</th>
-                <th className="px-8 py-5 text-right">Attendance</th>
+              <tr className={`bg-gray-50/50 text-gray-400 text-[10px] font-black uppercase tracking-widest ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <th className="px-8 py-5">{t('student_history.col_date')}</th>
+                <th className="px-8 py-5">{t('student_history.col_activity')}</th>
+                <th className="px-8 py-5">{t('student_history.col_recitation')}</th>
+                <th className="px-8 py-5 text-center">{t('student_history.col_rating')}</th>
+                <th className={`px-8 py-5 ${isRTL ? 'text-left' : 'text-right'}`}>{t('student_history.col_attendance')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 bg-white">
@@ -559,16 +565,17 @@ const StudentProgress = () => {
                         isNotPrep ? 'bg-red-50 text-red-600 font-black' :
                         record.type === 'Hifz' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
                       }`}>
-                        {record.type.replace('NotPrepared', 'Unprepared')}
+                        {isNotPrep ? t('student_history.filter_unprepared') : 
+                         record.type === 'Hifz' ? t('common.hifz') : t('common.muraja')}
                       </span>
                     </td>
                     <td className="px-8 py-6">
                       {isNotPrep ? (
-                        <span className="text-xs text-gray-400 italic">No progress</span>
+                        <span className="text-xs text-gray-400 italic">{t('student_history.no_progress')}</span>
                       ) : (
                         <div className="flex flex-col">
-                          <span className="text-sm font-bold text-gray-700 truncate max-w-[200px]">Surah {record.surah_id}</span>
-                          <span className="text-[10px] text-gray-400 font-medium">Verses {record.start_verse}–{record.end_verse}</span>
+                          <span className="text-sm font-bold text-gray-700 truncate max-w-[200px]">{t('student_history.surah_only', { id: record.surah_id })}</span>
+                          <span className="text-[10px] text-gray-400 font-medium">{t('student_history.verses_only', { start: record.start_verse, end: record.end_verse })}</span>
                         </div>
                       )}
                     </td>
@@ -582,15 +589,15 @@ const StudentProgress = () => {
                         </div>
                       ) : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-8 py-6 text-right">
+                    <td className={`px-8 py-6 ${isRTL ? 'text-left' : 'text-right'}`}>
                       {att ? (
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase ${
                           att.status === 'Present' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
+                        } ${isRTL ? 'flex-row-reverse' : ''}`}>
                           <div className={`w-1.5 h-1.5 rounded-full ${att.status === 'Present' ? 'bg-green-600' : 'bg-red-600'}`}></div>
-                          {att.status}
+                          {att.status === 'Present' ? t('student_history.present') : t('student_history.absent')}
                         </div>
-                      ) : <span className="text-[10px] text-gray-300 font-bold uppercase italic tracking-tighter">No Record</span>}
+                      ) : <span className="text-[10px] text-gray-300 font-bold uppercase italic tracking-tighter">{t('student_history.no_record')}</span>}
                     </td>
                   </tr>
                 );

@@ -11,6 +11,8 @@ import {
   Coffee,
   Sun
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { ar, enUS } from 'date-fns/locale';
 import { 
   format, 
   addMonths, 
@@ -25,6 +27,10 @@ import {
 } from 'date-fns';
 
 const Schedules = () => {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
+  const dateLocale = isRTL ? ar : enUS;
+  
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduleData, setScheduleData] = useState(null);
@@ -49,7 +55,7 @@ const Schedules = () => {
         // Only theory classes for specific schedules
         setClasses(res.data.filter(c => c.type === 'Theory'));
       } catch (error) {
-        toast.error('Failed to load classes');
+        toast.error(t('schedules.load_classes_error'));
       }
     };
     fetchClasses();
@@ -65,7 +71,7 @@ const Schedules = () => {
       setManualOverrides(res.data.schedule.manual_overrides || {});
     } catch (error) {
       console.error('Error fetching schedule:', error);
-      toast.error('Failed to load schedule');
+      toast.error(t('schedules.load_schedule_error'));
     } finally {
       setLoading(false);
     }
@@ -90,10 +96,10 @@ const Schedules = () => {
         manual_overrides: manualOverrides,
         class_id: scheduleType === 'Theory' ? Number(selectedClassId) : null
       });
-      toast.success('Schedule saved successfully');
+      toast.success(t('schedules.save_success'));
       fetchSchedule();
     } catch (error) {
-      toast.error('Failed to save schedule');
+      toast.error(t('schedules.save_error'));
     } finally {
       setSaving(false);
     }
@@ -168,14 +174,16 @@ const Schedules = () => {
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
 
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekDays = isRTL 
+    ? ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Calendar & Schedules</h1>
-          <p className="text-sm text-gray-500 mt-1">Configure active and passive days for attendance tracking.</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('schedules.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('schedules.subtitle')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex bg-gray-100 p-1 rounded-xl">
@@ -188,7 +196,7 @@ const Schedules = () => {
                 scheduleType === 'Quranic' ? 'bg-white text-secondary-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              Quranic
+              {t('schedules.quranic')}
             </button>
             <button
               onClick={() => setScheduleType('Theory')}
@@ -196,7 +204,7 @@ const Schedules = () => {
                 scheduleType === 'Theory' ? 'bg-white text-secondary-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              Theory
+              {t('schedules.theory')}
             </button>
           </div>
 
@@ -206,7 +214,7 @@ const Schedules = () => {
               onChange={(e) => setSelectedClassId(e.target.value)}
               className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-secondary-500/20"
             >
-              <option value="">Select a Class...</option>
+              <option value="">{t('schedules.select_class')}</option>
               {classes.map(c => (
                 <option key={c.id} value={c.id}>{c.class_name}</option>
               ))}
@@ -218,10 +226,10 @@ const Schedules = () => {
             disabled={saving || loading || (scheduleType === 'Theory' && !selectedClassId)}
             className="btn-primary flex items-center gap-2"
           >
-            {saving ? 'Saving...' : (
+            {saving ? t('schedules.saving') : (
               <>
                 <Save size={18} />
-                Save Schedule
+                {t('schedules.save_schedule')}
               </>
             )}
           </button>
@@ -234,9 +242,9 @@ const Schedules = () => {
           <div className="card p-6 border border-gray-100 bg-white">
             <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Settings size={20} className="text-secondary-600" />
-              Weekend Settings
+              {t('schedules.weekend_settings')}
             </h2>
-            <p className="text-sm text-gray-500 mb-4">Select days that are globally off (Passive) by default.</p>
+            <p className="text-sm text-gray-500 mb-4">{t('schedules.weekend_desc')}</p>
             <div className="flex flex-wrap gap-2">
               {weekDays.map((day, idx) => (
                 <button
@@ -261,24 +269,24 @@ const Schedules = () => {
           <div className="card p-6 border border-gray-100 bg-white">
             <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Info size={20} className="text-blue-600" />
-              Legend
+              {t('schedules.legend')}
             </h2>
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded bg-white border-2 border-gray-100 shadow-sm"></div>
-                <span className="text-gray-600">Active (Work Day)</span>
+                <span className="text-gray-600">{t('schedules.active_work')}</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded bg-secondary-100 border-2 border-secondary-200"></div>
-                <span className="text-gray-600">Passive (Weekend)</span>
+                <span className="text-gray-600">{t('schedules.passive_weekend')}</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded bg-orange-100 border-2 border-orange-300"></div>
-                <span className="text-gray-600">Manual Passive (Day Off)</span>
+                <span className="text-gray-600">{t('schedules.manual_passive')}</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded bg-primary-100 border-2 border-primary-300"></div>
-                <span className="text-gray-600">Manual Active (Extra Day)</span>
+                <span className="text-gray-600">{t('schedules.manual_active')}</span>
               </div>
             </div>
           </div>
@@ -288,7 +296,7 @@ const Schedules = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold flex items-center gap-2">
                   <Sun size={20} />
-                  Month Metrics
+                  {t('schedules.metrics_title')}
                 </h2>
                 <span className="text-xs px-2 py-0.5 bg-white/20 rounded-full font-medium">
                   {monthYearStr}
@@ -296,11 +304,11 @@ const Schedules = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white/10 p-3 rounded-xl">
-                  <p className="text-xs text-secondary-100">Total Active</p>
+                  <p className="text-xs text-secondary-100">{t('schedules.total_active')}</p>
                   <p className="text-2xl font-bold">{dynamicMetrics.totalActive}</p>
                 </div>
                 <div className="bg-white/10 p-3 rounded-xl">
-                  <p className="text-xs text-secondary-100">Remaining</p>
+                  <p className="text-xs text-secondary-100">{t('schedules.remaining')}</p>
                   <p className="text-2xl font-bold">{dynamicMetrics.remaining}</p>
                 </div>
               </div>
@@ -316,16 +324,16 @@ const Schedules = () => {
               <div className="flex items-center gap-2">
                 <CalendarIcon className="text-secondary-600" size={24} />
                 <h2 className="text-xl font-bold text-gray-800">
-                  {format(currentDate, 'MMMM yyyy')}
+                  {format(currentDate, 'MMMM yyyy', { locale: dateLocale })}
                 </h2>
               </div>
               <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-200">
                 <button onClick={prevMonth} className="p-2 hover:bg-gray-100 text-gray-600 rounded-lg transition-colors">
-                  <ChevronLeft size={20} />
+                  {isRTL ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
                 </button>
                 <div className="h-4 w-px bg-gray-200 mx-1"></div>
                 <button onClick={nextMonth} className="p-2 hover:bg-gray-100 text-gray-600 rounded-lg transition-colors">
-                  <ChevronRight size={20} />
+                  {isRTL ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
                 </button>
               </div>
             </div>
@@ -342,7 +350,7 @@ const Schedules = () => {
               <div className="grid grid-cols-7 gap-1 sm:gap-2">
                 {loading ? (
                   <div className="col-span-7 h-96 flex items-center justify-center text-gray-400 italic">
-                    Loading month view...
+                    {t('schedules.loading_month')}
                   </div>
                 ) : calendarDays.map((date, i) => {
                   if (!date) return <div key={`empty-${i}`} className="h-16 sm:h-24 bg-gray-50/50 rounded-xl" />;
@@ -376,7 +384,7 @@ const Schedules = () => {
                     <button
                       key={info.dateStr}
                       onClick={() => toggleDay(info.dateStr, !weekendConfig.includes(getDay(date)))}
-                      className={`h-16 sm:h-24 p-2 sm:p-3 text-left relative flex flex-col justify-between transition-all border-2 rounded-2xl group ${bgColor} ${borderColor} ${isCurrentDay ? 'ring-2 ring-secondary-500 ring-offset-2' : ''}`}
+                      className={`h-16 sm:h-24 p-2 sm:p-3 text-start relative flex flex-col justify-between transition-all border-2 rounded-2xl group ${bgColor} ${borderColor} ${isCurrentDay ? 'ring-2 ring-secondary-500 ring-offset-2' : ''}`}
                     >
                       <div className="flex items-center justify-between">
                         <span className={`text-sm sm:text-lg font-bold ${info.isActive ? 'text-gray-800' : 'text-gray-400'}`}>
@@ -389,7 +397,7 @@ const Schedules = () => {
                       
                       <div className="flex items-center justify-between">
                         <span className={`text-[10px] sm:text-xs font-medium uppercase tracking-tighter ${info.isActive ? 'text-gray-400' : 'text-gray-300'}`}>
-                          {info.isActive ? 'Active' : 'Off'}
+                          {info.isActive ? t('schedules.active_label') : t('schedules.off_label')}
                         </span>
                         {isCurrentDay && (
                           <div className="w-1.5 h-1.5 rounded-full bg-secondary-500"></div>
@@ -404,7 +412,7 @@ const Schedules = () => {
             <div className="p-4 bg-gray-50 border-t border-gray-100">
               <p className="text-xs text-gray-500 text-center flex items-center justify-center gap-1">
                 <Info size={14} />
-                Click individual days to toggle between active and passive status. Don't forget to save.
+                {t('schedules.toggle_hint')}
               </p>
             </div>
           </div>
