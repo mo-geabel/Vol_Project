@@ -13,12 +13,14 @@ import TheoricStudents from './pages/admin/TheoricStudents';
 import Schedules from './pages/admin/Schedules';
 import Settings from './pages/admin/Settings';
 import Reports from './pages/admin/Reports';
+import TeacherAttendance from './pages/admin/TeacherAttendance';
 import AdminStatistics from './pages/admin/Statistics';
 import TeacherDashboard from './pages/TeacherDashboard';
 import TeacherClasses from './pages/teacher/TeacherClasses';
 import Attendance from './pages/teacher/Attendance';
 import QuranProgress from './pages/teacher/QuranProgress';
 import StudentProgress from './pages/teacher/StudentProgress';
+import TheoryProgress from './pages/teacher/TheoryProgress';
 import TeacherStatistics from './pages/TeacherStatistics';
 
 // Placeholder Pages
@@ -27,10 +29,6 @@ const Unauthorized = () => {
   return <div className="p-8"><h2>{t('common.unauthorized')}</h2></div>;
 };
 
-const TheoryProgress = () => {
-  const { t } = useTranslation();
-  return <div className="p-8"><h2>{t('common.theory_coming_soon')}</h2></div>;
-};
 
 function App() {
   const { user } = useAuth();
@@ -51,6 +49,7 @@ function App() {
             <Route path="/admin/students/theoric" element={<TheoricStudents />} />
             <Route path="/admin/schedules" element={<Schedules />} />
             <Route path="/admin/settings" element={<Settings />} />
+            <Route path="/admin/teacher-attendance" element={<TeacherAttendance />} />
             <Route path="/admin/reports" element={<Reports />} />
             <Route path="/admin/statistics" element={<AdminStatistics />} />
           </Route>

@@ -12,8 +12,9 @@ model User {
   name          String
   username      String  @unique
   password_hash String
-  role          Role    @default(teacher)
-  classes       Class[]
+  role              Role                @default(teacher)
+  classes           Class[]
+  teacher_attendances TeacherAttendance[] @relation("UserToTeacherAttendance")
 
   @@map("users")
 }
@@ -38,6 +39,7 @@ model Class {
   teacher           User?        @relation(fields: [teacher_id], references: [id])
   enrollments       Enrollment[]
   schedules         Schedule[]
+  theory_progress   TheoryProgress[]
 
   @@map("classes")
 }
@@ -62,7 +64,6 @@ model Enrollment {
   class           Class            @relation(fields: [class_id], references: [id])
   student         Student          @relation(fields: [student_id], references: [id])
   quran_progress  QuranProgress[]
-  theory_progress TheoryProgress[]
 
   @@unique([student_id, class_id])
   @@map("enrollments")
@@ -77,6 +78,18 @@ model Attendance {
 
   @@unique([enrollment_id, date])
   @@map("attendances")
+}
+
+model TeacherAttendance {
+  id         Int              @id @default(autoincrement())
+  teacher_id Int
+  date       DateTime         @db.Date
+  status     AttendanceStatus
+  notes      String?
+  teacher    User             @relation("UserToTeacherAttendance", fields: [teacher_id], references: [id])
+
+  @@unique([teacher_id, date])
+  @@map("teacher_attendance")
 }
 
 model QuranProgress {
@@ -95,12 +108,15 @@ model QuranProgress {
 
 model TheoryProgress {
   id            Int        @id @default(autoincrement())
-  enrollment_id Int
+  class_id      Int
   date          DateTime   @db.Date
+  book_title    String
   topic_name    String
+  pages_read    Int?
   notes         String?
-  enrollment    Enrollment @relation(fields: [enrollment_id], references: [id])
+  class         Class      @relation(fields: [class_id], references: [id])
 
+  @@unique([class_id, date])
   @@map("theory_progress")
 }
 

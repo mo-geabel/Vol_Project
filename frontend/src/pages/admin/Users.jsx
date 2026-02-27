@@ -92,71 +92,127 @@ const Users = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 font-display">{t('users.title')}</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 font-display">{t('users.title')}</h1>
+          <p className="text-xs text-gray-500 mt-0.5">{t('users.manage_subtitle') || 'Manage and monitor system access'}</p>
+        </div>
         <button 
           onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center gap-2 group"
+          className="btn-primary flex items-center justify-center gap-2 group py-2.5 px-5 rounded-2xl shadow-lg shadow-primary-200"
         >
           <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
-          {t('users.add_user')}
+          <span className="font-bold text-sm">{t('users.add_user')}</span>
         </button>
       </div>
 
-      <div className="card shadow-sm border border-gray-100 overflow-hidden bg-white">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+      <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm shadow-gray-200/50">
+        {/* Mobile View: Cards */}
+        <div className="md:hidden divide-y divide-gray-50 bg-white">
+          {users.map((user) => (
+            <div key={user.id} className="p-4 flex items-center justify-between hover:bg-gray-50/50 transition-all">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm shadow-sm">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-gray-900">{user.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-gray-400">@{user.username}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                      user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
+                    }`}>
+                      {t(`users.${user.role}`)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-1">
+                <button 
+                  onClick={() => handleEdit(user)} 
+                  className="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-90"
+                  title={t('common.edit')}
+                >
+                  <Edit size={18} />
+                </button>
+                <button 
+                  onClick={() => handleDelete(user)} 
+                  className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-90"
+                  title="Delete User"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
+          ))}
+          {users.length === 0 && (
+            <div className="p-12 text-center text-gray-400">
+              <div className="flex flex-col items-center gap-2">
+                <AlertCircle size={40} className="text-gray-100" />
+                <p className="text-xs font-bold uppercase tracking-widest">{t('users.no_users')}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50/50">
               <tr>
-                <th className="px-6 py-3 text-start text-xs font-semibold text-gray-400 uppercase tracking-widest">{t('common.name')}</th>
-                <th className="px-6 py-3 text-start text-xs font-semibold text-gray-400 uppercase tracking-widest">{t('common.username')}</th>
-                <th className="px-6 py-3 text-start text-xs font-semibold text-gray-400 uppercase tracking-widest">{t('common.role')}</th>
-                <th className="px-6 py-3 text-end text-xs font-semibold text-gray-400 uppercase tracking-widest">{t('common.actions')}</th>
+                <th className={`px-6 py-4 ${isRTL ? 'text-right' : 'text-left'} text-[10px] font-black text-gray-400 uppercase tracking-widest`}>{t('common.name')}</th>
+                <th className={`px-6 py-4 ${isRTL ? 'text-right' : 'text-left'} text-[10px] font-black text-gray-400 uppercase tracking-widest`}>{t('common.username')}</th>
+                <th className={`px-6 py-4 ${isRTL ? 'text-right' : 'text-left'} text-[10px] font-black text-gray-400 uppercase tracking-widest`}>{t('common.role')}</th>
+                <th className={`px-6 py-4 ${isRTL ? 'text-left' : 'text-right'} text-[10px] font-black text-gray-400 uppercase tracking-widest`}>{t('common.actions')}</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-100 italic-last-td">
+            <tbody className="bg-white divide-y divide-gray-50">
               {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors group">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold margin-inline-end-3 text-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-gray-50 group-hover:bg-white flex items-center justify-center text-primary-600 font-bold border border-gray-100 shadow-xs transition-all">
                         {user.name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-sm font-medium text-gray-900">{user.name}</span>
+                      <span className="text-sm font-bold text-gray-900">{user.name}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono tracking-tight">{user.username}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full shadow-xs ${
-                      user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
+                    <span className={`px-2.5 py-1 inline-flex text-[10px] font-black uppercase tracking-wider rounded-lg shadow-xs ${
+                      user.role === 'admin' ? 'bg-purple-50 text-purple-700 border border-purple-100' : 'bg-green-50 text-green-700 border border-green-100'
                     }`}>
-                      {user.role}
+                      {t(`users.${user.role}`)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-end text-sm font-medium flex gap-2 justify-end">
-                    <button 
-                      onClick={() => handleEdit(user)} 
-                      className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all active:scale-90"
-                      title={t('common.edit')}
-                    >
-                      <Edit size={18} />
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(user)} 
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all active:scale-90"
-                      title="Delete User"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className={`flex gap-1 ${isRTL ? 'justify-start' : 'justify-end'}`}>
+                      <button 
+                        onClick={() => handleEdit(user)} 
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all active:scale-95"
+                        title={t('common.edit')}
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(user)} 
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all active:scale-95"
+                        title="Delete User"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="px-6 py-12 text-center text-sm text-gray-400">
-                    <div className="flex flex-col items-center gap-2">
-                      <Users size={40} className="text-gray-200" />
-                      {t('users.no_users')}
+                  <td colSpan="4" className="px-6 py-16 text-center text-gray-400">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-gray-50 rounded-2xl">
+                        <AlertCircle size={40} className="text-gray-200" />
+                      </div>
+                      <p className="text-xs font-bold uppercase tracking-widest">{t('users.no_users')}</p>
                     </div>
                   </td>
                 </tr>

@@ -19,7 +19,7 @@ const Login = () => {
 
     try {
       const user = await login(username, password);
-      toast.success(`Welcome back, ${user.name}!`);
+      toast.success(t('login.welcome_back', { name: user.name }));
       
       // Redirect based on role
       if (user.role === 'admin') {

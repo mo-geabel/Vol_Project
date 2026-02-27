@@ -15,7 +15,7 @@ const AdminDashboard = () => {
     enrollments: 0
   });
   const [graphs, setGraphs] = useState({ attendanceTrend: [] });
-  const [topStudents, setTopStudents] = useState({ attendance: [], performance: [] });
+  const [topStudents, setTopStudents] = useState({ attendance: [], performance: [], teachers: [] });
   const { i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
   const isRTL = i18n.language === 'ar';
@@ -77,7 +77,7 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
         {/* Attendance Trend Chart */}
         <div className="card p-6 border-t-4 border-blue-500">
           <h2 className="text-lg font-bold text-gray-900 mb-6">{t('dashboard.attendance_trend')}</h2>
@@ -110,11 +110,35 @@ const AdminDashboard = () => {
                 <h3 className="text-2xl font-black text-gray-900 mb-1">{topStudents.performance[0].name}</h3>
                 <p className="text-gray-500 font-medium mb-4">{topStudents.performance[0].class}</p>
                 <div className="inline-flex items-center justify-center px-4 py-2 bg-primary-50 text-primary-700 rounded-full font-bold text-sm">
-                  {topStudents.performance[0].progress_count} Logs Recorded
+                  {topStudents.performance[0].progress_count} {t('dashboard.logs_recorded')}
                 </div>
               </>
             ) : (
               <p className="text-gray-400 font-medium italic">No performance data yet</p>
+            )}
+          </div>
+        </div>
+
+        {/* Best Teacher Attendance Card */}
+        <div className="card border-t-4 border-amber-500 flex flex-col">
+          <div className="p-4 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-amber-800">{t('dashboard.best_teacher_attendance')}</h2>
+            <ClipboardList size={20} className="text-amber-600" />
+          </div>
+          <div className="p-6 flex-1 flex flex-col justify-center items-center text-center">
+            {topStudents.teachers && topStudents.teachers.length > 0 ? (
+              <>
+                <div className="w-16 h-16 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center text-2xl font-black mb-4">
+                  {topStudents.teachers[0].name.charAt(0)}
+                </div>
+                <h3 className="text-2xl font-black text-gray-900 mb-1">{topStudents.teachers[0].name}</h3>
+                <p className="text-gray-500 font-medium mb-4">{t('users.teacher')}</p>
+                <div className="inline-flex items-center justify-center px-4 py-2 bg-amber-50 text-amber-700 rounded-full font-bold text-sm">
+                  {topStudents.teachers[0].present_count} {t('dashboard.logs_recorded')}
+                </div>
+              </>
+            ) : (
+              <p className="text-gray-400 font-medium italic">{t('dashboard.no_teacher_attendance')}</p>
             )}
           </div>
         </div>

@@ -70,7 +70,9 @@ const StudentProgress = () => {
   if (loading) return <div className="p-8 text-center text-primary-600 font-medium">{t('student_history.loading')}</div>;
   if (!data) return <div className="p-8 text-center">{t('student_history.not_found')}</div>;
 
-  const { enrollment, quran, attendance } = data;
+  const { enrollment, quran, theory, attendance } = data;
+  const isTheoryClass = enrollment.class.type === 'Theory';
+  const progressRecords = isTheoryClass ? theory : quran;
 
   // Helper for filtering
   const isMonthMatch = (dateStr, m, y) => {
@@ -110,13 +112,13 @@ const StudentProgress = () => {
     };
   };
 
-  const overallStats = calculateStats(quran, attendance, null, null);
-  const monthlyStats = calculateStats(quran, attendance, selectedMonth, selectedYear);
+  const overallStats = calculateStats(progressRecords, attendance, null, null);
+  const monthlyStats = calculateStats(progressRecords, attendance, selectedMonth, selectedYear);
 
   // --- LOG FILTERING ---
-  const filteredLog = quran.filter(record => {
-    // Type Filter
-    if (logTypeFilter !== 'All') {
+  const filteredLog = progressRecords.filter(record => {
+    // Type Filter (only for Quran)
+    if (!isTheoryClass && logTypeFilter !== 'All') {
       if (logTypeFilter === 'Unprepared') {
         if (!record.type.includes('NotPrepared')) return false;
       } else if (record.type !== logTypeFilter) return false;
@@ -135,19 +137,19 @@ const StudentProgress = () => {
   });
 
   // --- CHART DATA ---
-  const filteredForCharts = filterMode === 'Monthly' ? quran.filter(p => isMonthMatch(p.date, selectedMonth, selectedYear)) : quran;
+  const filteredForCharts = filterMode === 'Monthly' ? progressRecords.filter(p => isMonthMatch(p.date, selectedMonth, selectedYear)) : progressRecords;
   
-  const hifzChart = [...filteredForCharts].filter(p => p.type === 'Hifz' && p.rating !== null).reverse().map(p => ({
+  const hifzChart = !isTheoryClass ? [...filteredForCharts].filter(p => p.type === 'Hifz' && p.rating !== null).reverse().map(p => ({
     date: format(new Date(p.date), 'MM/dd'),
     fullDate: format(new Date(p.date), 'MMM dd, yyyy'),
     rating: p.rating
-  }));
+  })) : [];
 
-  const murajaChart = [...filteredForCharts].filter(p => p.type === 'Muraja' && p.rating !== null).reverse().map(p => ({
+  const murajaChart = !isTheoryClass ? [...filteredForCharts].filter(p => p.type === 'Muraja' && p.rating !== null).reverse().map(p => ({
     date: format(new Date(p.date), 'MM/dd'),
     fullDate: format(new Date(p.date), 'MMM dd, yyyy'),
     rating: p.rating
-  }));
+  })) : [];
 
   const attChart = [...filteredForCharts].slice(0, 15).reverse().map(a => {
     const att = attendance.find(att => format(new Date(att.date), 'yyyy-MM-dd') === format(new Date(a.date), 'yyyy-MM-dd'));
@@ -435,15 +437,18 @@ const StudentProgress = () => {
             <div className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
               {/* Type Switches */}
               <div className={`flex items-center gap-1 bg-gray-50 p-1 rounded-xl sm:rounded-2xl border border-gray-100 overflow-x-auto no-scrollbar max-w-full ${isRTL ? 'flex-row-reverse' : ''}`}>
-                {['All', 'Hifz', 'Muraja', 'Unprepared'].map(tType => (
+                {!isTheoryClass && ['All', 'Hifz', 'Muraja', 'Unprepared'].map(tType => (
                   <button 
                     key={tType}
                     onClick={() => setLogTypeFilter(tType)}
-                    className={`whitespace-nowrap px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${logTypeFilter === tType ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    className={`whitespace-nowrap px-4 py-2 rounded-lg sm:rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${logTypeFilter === tType ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                   >
                     {t(`student_history.filter_${tType.toLowerCase()}`)}
                   </button>
                 ))}
+                {isTheoryClass && (
+                  <div className="px-4 py-2 text-[10px] font-black text-primary-600 uppercase tracking-widest">{t('common.theoric')}</div>
+                )}
               </div>
 
               {/* Time Level Filter */}
@@ -505,27 +510,37 @@ const StudentProgress = () => {
                   </div>
                   
                   <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                    <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
-                      isNotPrep ? 'bg-red-50 text-red-600' :
-                      record.type === 'Hifz' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
-                    }`}>
-                      {isNotPrep ? t('student_history.filter_unprepared') : 
-                       record.type === 'Hifz' ? t('common.hifz') : t('common.muraja')}
-                    </span>
-                    
-                    {!isNotPrep && (
-                      <div className={`text-xs font-bold text-gray-700 flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
-                        {t('student_history.surah_verses', { id: record.surah_id, start: record.start_verse, end: record.end_verse })}
+                    {isTheoryClass ? (
+                      <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                        <div className="text-xs font-bold text-indigo-600">{enrollment.class.book_title || t('common.unassigned')}</div>
+                        <div className="text-[10px] text-gray-500">{record.topic_name}</div>
+                        {record.pages_read && <div className="text-[9px] text-gray-400">Pages: {record.pages_read}</div>}
                       </div>
-                    )}
-                    
-                    {record.rating && (
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs border ${
-                        record.rating >= 8 ? 'bg-green-50 text-green-600 border-green-100' : 
-                        record.rating >= 5 ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-red-50 text-red-600 border-red-100'
-                      }`}>
-                        {record.rating}
-                      </div>
+                    ) : (
+                      <>
+                        <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
+                          isNotPrep ? 'bg-red-50 text-red-600' :
+                          record.type === 'Hifz' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
+                        }`}>
+                          {isNotPrep ? t('student_history.filter_unprepared') : 
+                          record.type === 'Hifz' ? t('common.hifz') : t('common.muraja')}
+                        </span>
+                        
+                        {!isNotPrep && (
+                          <div className={`text-xs font-bold text-gray-700 flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                            {t('student_history.surah_verses', { name: t('reports.surahs.' + record.surah_id), start: record.start_verse, end: record.end_verse })}
+                          </div>
+                        )}
+                        
+                        {record.rating && (
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs border ${
+                            record.rating >= 8 ? 'bg-green-50 text-green-600 border-green-100' : 
+                            record.rating >= 5 ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-red-50 text-red-600 border-red-100'
+                          }`}>
+                            {record.rating}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -543,9 +558,9 @@ const StudentProgress = () => {
             <thead>
               <tr className={`bg-gray-50/50 text-gray-400 text-[10px] font-black uppercase tracking-widest ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <th className="px-8 py-5">{t('student_history.col_date')}</th>
-                <th className="px-8 py-5">{t('student_history.col_activity')}</th>
-                <th className="px-8 py-5">{t('student_history.col_recitation')}</th>
-                <th className="px-8 py-5 text-center">{t('student_history.col_rating')}</th>
+                <th className="px-8 py-5">{isTheoryClass ? t('progress.theory.book') : t('student_history.col_activity')}</th>
+                <th className="px-8 py-5">{isTheoryClass ? t('progress.theory.topic') : t('student_history.col_recitation')}</th>
+                <th className="px-8 py-5 text-center">{isTheoryClass ? t('progress.theory.pages') : t('student_history.col_rating')}</th>
                 <th className={`px-8 py-5 ${isRTL ? 'text-left' : 'text-right'}`}>{t('student_history.col_attendance')}</th>
               </tr>
             </thead>
@@ -561,33 +576,50 @@ const StudentProgress = () => {
                       <div className="text-[10px] font-bold text-gray-400 uppercase">{format(new Date(record.date), 'EEEE')}</div>
                     </td>
                     <td className="px-8 py-6">
-                      <span className={`px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
-                        isNotPrep ? 'bg-red-50 text-red-600 font-black' :
-                        record.type === 'Hifz' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
-                      }`}>
-                        {isNotPrep ? t('student_history.filter_unprepared') : 
-                         record.type === 'Hifz' ? t('common.hifz') : t('common.muraja')}
-                      </span>
+                      {isTheoryClass ? (
+                        <span className={`px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600`}>
+                          {enrollment.class.book_title || t('common.unassigned')}
+                        </span>
+                      ) : (
+                        <span className={`px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                          isNotPrep ? 'bg-red-50 text-red-600 font-black' :
+                          record.type === 'Hifz' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
+                        }`}>
+                          {isNotPrep ? t('student_history.filter_unprepared') : 
+                          record.type === 'Hifz' ? t('common.hifz') : t('common.muraja')}
+                        </span>
+                      )}
                     </td>
                     <td className="px-8 py-6">
-                      {isNotPrep ? (
-                        <span className="text-xs text-gray-400 italic">{t('student_history.no_progress')}</span>
+                      {isTheoryClass ? (
+                         <div className="flex flex-col">
+                            <span className="text-sm font-bold text-gray-700 truncate max-w-[200px]">{record.topic_name}</span>
+                            {record.notes && <span className="text-[9px] text-gray-400 italic">{record.notes}</span>}
+                         </div>
                       ) : (
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-gray-700 truncate max-w-[200px]">{t('student_history.surah_only', { id: record.surah_id })}</span>
-                          <span className="text-[10px] text-gray-400 font-medium">{t('student_history.verses_only', { start: record.start_verse, end: record.end_verse })}</span>
-                        </div>
+                        isNotPrep ? (
+                          <span className="text-xs text-gray-400 italic">{t('student_history.no_progress')}</span>
+                        ) : (
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-gray-700 truncate max-w-[200px]">{t('student_history.surah_only', { name: t('reports.surahs.' + record.surah_id) })}</span>
+                            <span className="text-[10px] text-gray-400 font-medium">{t('student_history.verses_only', { start: record.start_verse, end: record.end_verse })}</span>
+                          </div>
+                        )
                       )}
                     </td>
                     <td className="px-8 py-6 text-center">
-                      {record.rating ? (
-                        <div className={`inline-flex w-10 h-10 rounded-2xl items-center justify-center font-black text-sm border-2 ${
-                          record.rating >= 8 ? 'bg-green-50 text-green-600 border-green-100' : 
-                          record.rating >= 5 ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-red-50 text-red-600 border-red-100'
-                        }`}>
-                          {record.rating}
-                        </div>
-                      ) : <span className="text-gray-300">—</span>}
+                      {isTheoryClass ? (
+                         <span className="text-sm font-black text-gray-600">{record.pages_read || '—'}</span>
+                      ) : (
+                        record.rating ? (
+                          <div className={`inline-flex w-10 h-10 rounded-2xl items-center justify-center font-black text-sm border-2 ${
+                            record.rating >= 8 ? 'bg-green-50 text-green-600 border-green-100' : 
+                            record.rating >= 5 ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-red-50 text-red-600 border-red-100'
+                          }`}>
+                            {record.rating}
+                          </div>
+                        ) : <span className="text-gray-300">—</span>
+                      )}
                     </td>
                     <td className={`px-8 py-6 ${isRTL ? 'text-left' : 'text-right'}`}>
                       {att ? (

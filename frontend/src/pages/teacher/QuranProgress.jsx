@@ -375,7 +375,7 @@ const QuranProgress = () => {
                     <option value="">{t('progress.select_surah')}</option>
                     {surahs.map(s => (
                       <option key={s.surah_id} value={s.surah_id}>
-                        {t('progress.surah_label', { id: s.surah_id, name: s.surah_name, count: s.verse_count })}
+                        {t('progress.surah_label', { id: s.surah_id, name: t('reports.surahs.' + s.surah_id), count: s.verse_count })}
                       </option>
                     ))}
                   </select>

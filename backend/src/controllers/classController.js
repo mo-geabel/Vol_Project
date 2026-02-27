@@ -81,6 +81,7 @@ const createClass = async (req, res) => {
         class_name,
         type,
         teacher_id: teacher_id ? Number(teacher_id) : null,
+        book_title: book_title || null,
         schedule_settings: schedule_settings || {},
       },
     });
@@ -113,6 +114,7 @@ const updateClass = async (req, res) => {
         class_name: class_name || classExists.class_name,
         type: type || classExists.type,
         teacher_id: teacher_id !== undefined ? (teacher_id ? Number(teacher_id) : null) : classExists.teacher_id,
+        book_title: book_title !== undefined ? book_title : classExists.book_title,
         schedule_settings: schedule_settings || classExists.schedule_settings,
       },
     });

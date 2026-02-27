@@ -1,39 +1,39 @@
 import arabicReshaper from 'arabic-reshaper';
-import bidiJs from 'bidi-js';
+import bidiFactory from 'bidi-js';
 
-const bidi = bidiJs();
-
-// Check if text contains Arabic characters
-const hasArabic = (text) =>
-  /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
+const bidi = bidiFactory();
 
 /**
- * Fixes Arabic text by reshaping it and applying Bidi reordering.
- * @param {string|number} text - The input text (could be mixed Arabic/English).
- * @returns {string} - The processed text ready for jsPDF.
+ * Fixes Arabic and mixed Arabic/English text for jsPDF.
+ * 1. Reshapes Arabic characters to handling initial/medial/final/isolated forms.
+ * 2. Uses the Unicode Bidirectional Algorithm (bidi-js) to reorder the text
+ *    into a visual string that jsPDF (which renders LTR) can display correctly.
+ * 
+ * This follows the "filtering" rule: English stays logical, Arabic is reordered.
  */
 export const fixArabicText = (text) => {
   if (text === null || text === undefined || text === '') return '';
 
-  // Ensure we work with a string
   const str = String(text);
-
-  // Skip processing for non-Arabic text (numbers, pure English, etc.)
-  if (!hasArabic(str)) return str;
+  
+  // If there's no Arabic or special presentation forms at all, return as-is
+  // (Faster than running the full bidi algorithm for pure English/Numbers)
+  if (!/[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str)) {
+    return str;
+  }
 
   try {
-    // 1. Reshape Arabic characters (joining them correctly)
-    const reshapedText = arabicReshaper.convertArabic(str);
+    // Stage 1: Reshape Arabic
+    // This connects letters (e.g. ب + ا -> با)
+    const reshaped = arabicReshaper.convertArabic(str);
 
-    // 2. Reorder for visual display using bidi algorithm
-    // Use 'auto' direction so mixed Arabic/English text is handled correctly
-    // (English segments stay LTR, Arabic segments get reordered for visual display)
-    const embeddingLevels = bidi.getEmbeddingLevels(reshapedText);
-    const reorderedText = bidi.getReorderedString(reshapedText, embeddingLevels);
-
-    return reorderedText;
+    // Stage 2: BiDi Reordering
+    // This reorders the string segments (e.g. "Eng ARB" -> "BRA Eng") 
+    // so it looks correct in jsPDF's LTR rendering engine.
+    // 'rtl' is used as the base direction if the text contains Arabic.
+    return bidi.getReorderedString(reshaped);
   } catch (error) {
-    console.warn('Arabic text processing failed, returning original text:', error);
+    console.warn('Arabic text processing failed:', error);
     return str;
   }
 };

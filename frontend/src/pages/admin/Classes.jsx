@@ -14,7 +14,7 @@ const Classes = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ class_name: '', type: 'Quran', teacher_id: '' });
+  const [formData, setFormData] = useState({ class_name: '', type: 'Quran', teacher_id: '', book_title: '' });
 
   const fetchData = async () => {
     try {
@@ -41,11 +41,12 @@ const Classes = () => {
       setFormData({ 
         class_name: cls.class_name, 
         type: cls.type, 
-        teacher_id: cls.teacher_id || '' 
+        teacher_id: cls.teacher_id || '',
+        book_title: cls.book_title || '' 
       });
     } else {
       setEditingId(null);
-      setFormData({ class_name: '', type: 'Quran', teacher_id: '' });
+      setFormData({ class_name: '', type: 'Quran', teacher_id: '', book_title: '' });
     }
     setShowModal(true);
   };
@@ -194,6 +195,19 @@ const Classes = () => {
                     </select>
                     <p className={`mt-1 text-xs text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('classes.teacher_hint')}</p>
                   </div>
+
+                  {formData.type === 'Theory' && (
+                    <div>
+                      <label className={`block text-sm font-medium text-gray-700 ${isRTL ? 'text-right' : 'text-left'}`}>{t('progress.theory.book')}</label>
+                      <input 
+                        type="text" 
+                        className="mt-1 input-field" 
+                        value={formData.book_title} 
+                        onChange={(e) => setFormData({...formData, book_title: e.target.value})} 
+                        placeholder={t('progress.theory.placeholder_book')}
+                      />
+                    </div>
+                  )}
                   
                   <div className={`mt-5 sm:mt-6 sm:flex sm:flex-row-reverse border-t border-gray-100 pt-4 ${isRTL ? 'sm:space-x-reverse' : ''}`}>
                     <button type="submit" className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">

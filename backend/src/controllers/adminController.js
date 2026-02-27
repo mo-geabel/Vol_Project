@@ -96,7 +96,35 @@ const getTopStudents = async (req, res) => {
       };
     });
 
-    res.json({ attendance: topAttendance, performance: topPerformance });
+    // Best Teacher Attendance
+    const teacherAttendanceStats = await prisma.teacherAttendance.groupBy({
+      by: ['teacher_id'],
+      where: { status: 'Present' },
+      _count: { status: true },
+      orderBy: { _count: { status: 'desc' } },
+      take: 3
+    });
+
+    const teacherIds = teacherAttendanceStats.map(stat => stat.teacher_id);
+    const teachers = await prisma.user.findMany({
+      where: { id: { in: teacherIds } },
+      select: { id: true, name: true }
+    });
+
+    const topTeachers = teacherAttendanceStats.map(stat => {
+      const teacher = teachers.find(t => t.id === stat.teacher_id);
+      return {
+        id: teacher?.id,
+        name: teacher?.name,
+        present_count: stat._count.status
+      };
+    });
+
+    res.json({ 
+      attendance: topAttendance, 
+      performance: topPerformance,
+      teachers: topTeachers 
+    });
   } catch (error) {
     console.error('Error fetching top students:', error);
     res.status(500).json({ message: 'Server error' });

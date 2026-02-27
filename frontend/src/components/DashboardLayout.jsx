@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   Menu, X, LogOut, Home, Users, BookOpen, 
-  CalendarDays, Settings, GraduationCap,
+  CalendarDays, Settings, GraduationCap, ClipboardList,
   ChevronDown, ChevronRight, FileText, Languages, TrendingUp
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -45,6 +45,7 @@ const DashboardLayout = () => {
     },
     { name: t('common.classes'), href: '/admin/classes', icon: BookOpen },
     { name: t('common.schedules'), href: '/admin/schedules', icon: CalendarDays },
+    { name: t('common.teacher_attendance'), href: '/admin/teacher-attendance', icon: ClipboardList },
     { name: t('common.reports'), href: '/admin/reports', icon: FileText },
     { name: t('common.statistics'), href: '/admin/statistics', icon: TrendingUp },
     { name: t('common.settings'), href: '/admin/settings', icon: Settings },

@@ -23,7 +23,7 @@ import '../../Fonts/Amiri-Bold-normal';
 
 const Reports = () => {
   const { t, i18n } = useTranslation();
-  const isRTL = i18n.language === 'ar';
+  const isRTL = i18n.language.startsWith('ar');
   const monthNames = [
     t('common.months.jan'), t('common.months.feb'), t('common.months.mar'),
     t('common.months.apr'), t('common.months.may'), t('common.months.jun'),
@@ -84,7 +84,24 @@ const Reports = () => {
       };
       
       const res = await api.get(`/reports/progress/${selectedClass}`, { params });
-      setReportData(res.data);
+      
+      // Translate surah names according to current language
+      const translatedReport = res.data.report.map(student => ({
+        ...student,
+        hifz: {
+          start: student.hifz.start ? { ...student.hifz.start, surah_name: t('reports.surahs.' + student.hifz.start.surah_id) } : null,
+          end: student.hifz.end ? { ...student.hifz.end, surah_name: t('reports.surahs.' + student.hifz.end.surah_id) } : null,
+        },
+        muraja: {
+          start: student.muraja.start ? { ...student.muraja.start, surah_name: t('reports.surahs.' + student.muraja.start.surah_id) } : null,
+          end: student.muraja.end ? { ...student.muraja.end, surah_name: t('reports.surahs.' + student.muraja.end.surah_id) } : null,
+        }
+      }));
+
+      setReportData({
+        ...res.data,
+        report: translatedReport
+      });
       toast.success(t('reports.generate_success'));
     } catch (error) {
       console.error(error);
@@ -100,9 +117,11 @@ const Reports = () => {
 
   const downloadPDF = () => {
     if (!reportData) return;
-    const doc = new jsPDF('l', 'mm', 'a4');
-    
+   const doc = new jsPDF('l', 'mm', 'a4');
+
     doc.setFont('Amiri-Regular', 'normal');
+    doc.setR2L(false); // Disable this; we are handling BiDi in our utility function
+    doc.setLanguage('ar');
     
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -124,7 +143,7 @@ const Reports = () => {
     const periodText = filterType === 'monthly' 
       ? `${monthNames[selectedMonth]} ${selectedYear}` 
       : `${selectedYear}`;
-    const mosqueName = settings.mosqueName || 'Mosque Educational Management System';
+    const mosqueName = settings.mosqueName || t('reports.mosque_default_name');
     const mosqueAddress = settings.mosqueAddress || '';
     const mosquePhone = settings.mosquePhone || '';
     
@@ -260,37 +279,66 @@ const Reports = () => {
     // =============================================
     const tableHeaders = [
       t('reports.student_number'),
-      t('reports.student_name'), 
-      t('reports.age'), 
-      t('reports.hifz_start'), 
-      t('reports.hifz_end'), 
-      t('reports.muraja_start'), 
-      t('reports.muraja_end'), 
-      t('reports.pres'), 
-      t('reports.abs')
+      t('reports.Student_Name'), 
+      t('reports.Age'), 
+      t('reports.Hifz_Start'), 
+      t('reports.Hifz_End'), 
+      t('reports.Muraja_Start'), 
+      t('reports.Muraja_End'), 
+      t('reports.pres.'), 
+      t('reports.abs.')
     ].map(h => fixArabicText(h));
     
     const tableData = reportData.report.map((row, idx) => [
       `${idx + 1}`,
       fixArabicText(row.name),
-      `${row.age || '—'}`,
-      row.hifz.start ? `${fixArabicText(row.hifz.start.surah_name)} v.${row.hifz.start.verse}` : '—',
-      row.hifz.end ? `${fixArabicText(row.hifz.end.surah_name)} v.${row.hifz.end.verse}` : '—',
-      row.muraja.start ? `${fixArabicText(row.muraja.start.surah_name)} v.${row.muraja.start.verse}` : '—',
-      row.muraja.end ? `${fixArabicText(row.muraja.end.surah_name)} v.${row.muraja.end.verse}` : '—',
+      row.age ? fixArabicText(`${t('reports.Age')}: ${row.age}`) : '—',
+      row.hifz.start ? fixArabicText(`${t('reports.surah')} ${row.hifz.start.surah_name} ${t('reports.verse')} ${row.hifz.start.verse}`) : '—',
+      row.hifz.end ? fixArabicText(`${t('reports.surah')} ${row.hifz.end.surah_name} ${t('reports.verse')} ${row.hifz.end.verse}`) : '—',
+      row.muraja.start ? fixArabicText(`${t('reports.surah')} ${row.muraja.start.surah_name} ${t('reports.verse')} ${row.muraja.start.verse}`) : '—',
+      row.muraja.end ? fixArabicText(`${t('reports.surah')} ${row.muraja.end.surah_name} ${t('reports.verse')} ${row.muraja.end.verse}`) : '—',
       row.attendance.activeDays,
       row.attendance.absentDays
     ]);
 
+    const finalHeaders = isRTL ? [...tableHeaders].reverse() : tableHeaders;
+    const finalData = isRTL ? tableData.map(row => [...row].reverse()) : tableData;
+
+    // Define column styles mapping based on visual index
+    const getColumnStyles = () => {
+      const baseStyles = {
+        0: { cellWidth: 10, halign: 'center', textColor: grayText, font: 'Amiri-Bold' },
+        1: { cellWidth: 45, halign: align, textColor: darkText, font: 'Amiri-Bold' },
+        2: { cellWidth: 12, halign: 'center' },
+        3: { cellWidth: 32 },
+        4: { cellWidth: 32, font: 'Amiri-Bold', textColor: darkGreen },
+        5: { cellWidth: 32 },
+        6: { cellWidth: 32, font: 'Amiri-Bold', textColor: [29, 78, 216] },
+        7: { cellWidth: 14, halign: 'center', textColor: [22, 120, 50], font: 'Amiri-Bold' },
+        8: { cellWidth: 14, halign: 'center', textColor: [200, 30, 30], font: 'Amiri-Bold' }
+      };
+
+      if (!isRTL) return baseStyles;
+
+      // Swap styles for RTL (reverse indices)
+      const reversedStyles = {};
+      const totalCols = tableHeaders.length;
+      Object.keys(baseStyles).forEach(idx => {
+        const newIdx = totalCols - 1 - parseInt(idx);
+        reversedStyles[newIdx] = baseStyles[idx];
+      });
+      return reversedStyles;
+    };
+
     autoTable(doc, {
       startY: currentY,
-      head: [tableHeaders],
-      body: tableData,
+      head: [finalHeaders],
+      body: finalData,
       theme: 'grid',
       headStyles: { 
         fillColor: darkGreen, 
         textColor: white, 
-        fontStyle: 'bold', 
+        fontStyle: 'normal', 
         fontSize: 8, 
         halign: 'center',
         cellPadding: 3,
@@ -305,19 +353,11 @@ const Reports = () => {
         font: 'Amiri-Regular',
         halign: 'center'
       },
-      columnStyles: {
-        0: { cellWidth: 10, halign: 'center', textColor: grayText, font: 'Amiri-Bold' },
-        1: { cellWidth: 45, halign: align, textColor: darkText, font: 'Amiri-Bold' },
-        2: { cellWidth: 12, halign: 'center' },
-        3: { cellWidth: 32 },
-        4: { cellWidth: 32, font: 'Amiri-Bold', textColor: darkGreen },
-        5: { cellWidth: 32 },
-        6: { cellWidth: 32, font: 'Amiri-Bold', textColor: [29, 78, 216] },
-        7: { cellWidth: 14, halign: 'center', textColor: [22, 120, 50], font: 'Amiri-Bold' },
-        8: { cellWidth: 14, halign: 'center', textColor: [200, 30, 30], font: 'Amiri-Bold' }
-      },
+      columnStyles: getColumnStyles(),
       alternateRowStyles: { fillColor: [250, 253, 250] },
-      margin: { left: margin, right: margin },
+      // Table Width = 10 + 45 + 12 + (32*4) + (14*2) = 223mm
+      // Centering logic: margin = (pageWidth - tableWidth) / 2
+      margin: { left: (pageWidth - 223) / 2, right: (pageWidth - 223) / 2 },
       tableLineColor: [200, 200, 200],
       tableLineWidth: 0.2
     });

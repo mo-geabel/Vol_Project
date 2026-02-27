@@ -121,27 +121,28 @@ const logQuranProgress = async (req, res) => {
 // @access  Private
 const logTheoryProgress = async (req, res) => {
   try {
-    const { enrollment_id, date, topic_name, notes } = req.body;
+    const { class_id, date, topic_name, pages_read, notes } = req.body;
 
-    if (!enrollment_id || !date || !topic_name) {
+    if (!class_id || !date || !topic_name) {
       return res.status(400).json({ message: 'Missing required theory tracking fields' });
     }
 
-    const enrollment = await prisma.enrollment.findUnique({
-      where: { id: Number(enrollment_id) },
-      include: { class: true }
+    const classInfo = await prisma.class.findUnique({
+      where: { id: Number(class_id) }
     });
 
-    if (!enrollment) return res.status(404).json({ message: 'Enrollment not found' });
+    if (!classInfo) return res.status(404).json({ message: 'Class not found' });
 
-    if (req.user.role === 'teacher' && enrollment.class.teacher_id !== req.user.id) {
-       return res.status(403).json({ message: 'Not authorized for this enrollment' });
+    if (req.user.role === 'teacher' && classInfo.teacher_id !== req.user.id) {
+       return res.status(403).json({ message: 'Not authorized for this class' });
     }
 
-    const existingProgress = await prisma.theoryProgress.findFirst({
+    const existingProgress = await prisma.theoryProgress.findUnique({
       where: {
-        enrollment_id: Number(enrollment_id),
-        date: new Date(date)
+        class_id_date: {
+          class_id: Number(class_id),
+          date: new Date(date)
+        }
       }
     });
 
@@ -151,25 +152,21 @@ const logTheoryProgress = async (req, res) => {
         where: { id: existingProgress.id },
         data: {
           topic_name,
+          pages_read: pages_read !== undefined ? Number(pages_read) : null,
           notes,
         }
       });
     } else {
       progressResult = await prisma.theoryProgress.create({
         data: {
-          enrollment_id: Number(enrollment_id),
+          class_id: Number(class_id),
           date: new Date(date),
           topic_name,
+          pages_read: pages_read !== undefined ? Number(pages_read) : null,
           notes,
         }
       });
     }
-
-    // Auto mark present
-    await markPresentViaProgress(enrollment_id, date);
-
-    // Evaluate 60% rule
-    await checkAttendanceSixtyPercentRule(enrollment_id, new Date(date));
 
     res.status(201).json(progressResult);
   } catch (error) {
@@ -264,12 +261,8 @@ const getProgressForEnrollment = async (req, res) => {
   try {
     const { id } = req.params; // enrollment ID
 
-    const [quran, theory, attendance, enrollment] = await Promise.all([
+    const [quran, attendance, enrollment] = await Promise.all([
       prisma.quranProgress.findMany({
-        where: { enrollment_id: Number(id) },
-        orderBy: { date: 'desc' }
-      }),
-      prisma.theoryProgress.findMany({
         where: { enrollment_id: Number(id) },
         orderBy: { date: 'desc' }
       }),
@@ -290,6 +283,14 @@ const getProgressForEnrollment = async (req, res) => {
       return res.status(404).json({ message: 'Enrollment not found' });
     }
 
+    let theory = [];
+    if (enrollment.class.type === 'Theory') {
+      theory = await prisma.theoryProgress.findMany({
+        where: { class_id: enrollment.class_id },
+        orderBy: { date: 'desc' }
+      });
+    }
+
     res.json({ enrollment, quran, theory, attendance });
   } catch (err) {
     console.error(err);
@@ -301,22 +302,46 @@ const getClassDailyProgress = async (req, res) => {
   try {
     const { classId, date } = req.params;
 
-    const progress = await prisma.quranProgress.findMany({
-      where: {
-        enrollment: {
-          class_id: Number(classId)
-        },
-        date: new Date(date)
-      },
-      include: {
-        enrollment: {
-          select: {
-            id: true,
-            student_id: true
+    const classInfo = await prisma.class.findUnique({
+      where: { id: Number(classId) },
+      select: { type: true }
+    });
+
+    if (!classInfo) {
+      return res.status(404).json({ message: 'Class not found' });
+    }
+
+    let progress;
+    if (classInfo.type === 'Theory') {
+      progress = await prisma.theoryProgress.findUnique({
+        where: {
+          class_id_date: {
+            class_id: Number(classId),
+            date: new Date(date)
           }
         }
-      }
-    });
+      });
+      // Wrap it in a single-item array or just return it. 
+      // For consistency with Quran, let's keep it as is, but the frontend will handle it.
+      // Actually, if it's one record, let's just send it.
+    } else {
+      progress = await prisma.quranProgress.findMany({
+        where: {
+          enrollment: {
+            class_id: Number(classId)
+          },
+          date: new Date(date)
+        },
+        include: {
+          enrollment: {
+            select: {
+              id: true,
+              student_id: true
+            }
+          }
+        }
+      });
+    }
 
     res.json(progress);
   } catch (error) {
