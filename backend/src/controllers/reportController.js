@@ -122,12 +122,12 @@ const getClassProgressReport = async (req, res) => {
         name: student.name,
         age: age,
         hifz: {
-          start: hifzStart ? { surah_id: hifzStart.surah_id, verse: hifzStart.start_verse, date: hifzStart.date } : null,
-          end: hifzEnd ? { surah_id: hifzEnd.surah_id, verse: hifzEnd.end_verse, date: hifzEnd.date } : null
+          start: hifzStart ? { surah_id: hifzStart.surah_id, start: hifzStart.start_verse, end: hifzStart.end_verse, date: hifzStart.date } : null,
+          end: hifzEnd ? { surah_id: hifzEnd.surah_id, start: hifzEnd.start_verse, end: hifzEnd.end_verse, date: hifzEnd.date } : null
         },
         muraja: {
-          start: murajaStart ? { surah_id: murajaStart.surah_id, verse: murajaStart.start_verse, date: murajaStart.date } : null,
-          end: murajaEnd ? { surah_id: murajaEnd.surah_id, verse: murajaEnd.end_verse, date: murajaEnd.date } : null
+          start: murajaStart ? { surah_id: murajaStart.surah_id, start: murajaStart.start_verse, end: murajaStart.end_verse, date: murajaStart.date } : null,
+          end: murajaEnd ? { surah_id: murajaEnd.surah_id, start: murajaEnd.start_verse, end: murajaEnd.end_verse, date: murajaEnd.date } : null
         },
         theory: theoryData,
         attendance: {
