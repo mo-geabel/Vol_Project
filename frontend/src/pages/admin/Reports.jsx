@@ -962,13 +962,7 @@ const downloadTheoryPDF = () => {
           </div>
           
           <div className="flex gap-2">
-            <button 
-              onClick={handlePrint}
-              disabled={!reportData}
-              className="px-4 py-2 bg-gray-50 text-gray-700 rounded-xl font-bold text-sm border border-gray-100 hover:bg-gray-100 transition-all flex items-center gap-2 disabled:opacity-50 uppercase tracking-tight"
-            >
-              <Printer size={18} /> {t('reports.print')}
-            </button>
+
             <button 
               onClick={downloadPDF}
               disabled={!reportData}
@@ -1168,17 +1162,17 @@ const downloadTheoryPDF = () => {
                       {!isSelectedTheory && (
                         <>
                           <td className="p-4 text-center text-xs bg-amber-50/10 italic text-gray-500 border-r border-amber-100/30">
-                            {row.hifz.start ? `${row.hifz.start.surah_name} ${row.hifz.start.verse}` : '—'}
+                            {row.hifz.start ? `${row.hifz.start.surah_name} (${row.hifz.start.start === row.hifz.start.end ? row.hifz.start.start : `${row.hifz.start.start}-${row.hifz.start.end}`})` : '—'}
                           </td>
                           <td className="p-4 text-center text-xs bg-amber-50/10 font-bold text-amber-700">
-                            {row.hifz.end ? `${row.hifz.end.surah_name} ${row.hifz.end.verse}` : '—'}
+                            {row.hifz.end ? `${row.hifz.end.surah_name} (${row.hifz.end.start === row.hifz.end.end ? row.hifz.end.start : `${row.hifz.end.start}-${row.hifz.end.end}`})` : '—'}
                           </td>
                           
                           <td className="p-4 text-center text-xs bg-blue-50/10 italic text-gray-500 border-r border-blue-100/30">
-                            {row.muraja.start ? `${row.muraja.start.surah_name} ${row.muraja.start.verse}` : '—'}
+                            {row.muraja.start ? `${row.muraja.start.surah_name} (${row.muraja.start.start === row.muraja.start.end ? row.muraja.start.start : `${row.muraja.start.start}-${row.muraja.start.end}`})` : '—'}
                           </td>
                           <td className="p-4 text-center text-xs bg-blue-50/10 font-bold text-blue-700">
-                            {row.muraja.end ? `${row.muraja.end.surah_name} ${row.muraja.end.verse}` : '—'}
+                            {row.muraja.end ? `${row.muraja.end.surah_name} (${row.muraja.end.start === row.muraja.end.end ? row.muraja.end.start : `${row.muraja.end.start}-${row.muraja.end.end}`})` : '—'}
                           </td>
                         </>
                       )}
