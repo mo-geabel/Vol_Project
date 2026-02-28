@@ -14,19 +14,19 @@ app.get('/', (req, res) => {
   res.json({ message: 'Mosque Educational Management System API (JavaScript)' });
 });
 
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/classes', require('./routes/classRoutes'));
-app.use('/api/students', require('./routes/studentRoutes'));
-app.use('/api/enrollments', require('./routes/enrollmentRoutes'));
-app.use('/api/schedules', require('./routes/scheduleRoutes'));
-app.use('/api/progress', require('./routes/progressRoutes'));
-app.use('/api/attendance', require('./routes/attendanceRoutes'));
-app.use('/api/admin', require('./routes/adminRoutes'));
-app.use('/api/teacher', require('./routes/teacherRoutes'));
-app.use('/api/settings', require('./routes/settingsRoutes'));
-app.use('/api/teacher-attendance', require('./routes/teacherAttendanceRoutes'));
-app.use('/api/reports', require('./routes/reportRoutes'));
+app.use('/auth', require('./routes/authRoutes'));
+app.use('/users', require('./routes/userRoutes'));
+app.use('/classes', require('./routes/classRoutes'));
+app.use('/students', require('./routes/studentRoutes'));
+app.use('/enrollments', require('./routes/enrollmentRoutes'));
+app.use('/schedules', require('./routes/scheduleRoutes'));
+app.use('/progress', require('./routes/progressRoutes'));
+app.use('/attendance', require('./routes/attendanceRoutes'));
+app.use('/admin', require('./routes/adminRoutes'));
+app.use('/teacher', require('./routes/teacherRoutes'));
+app.use('/settings', require('./routes/settingsRoutes'));
+app.use('/teacher-attendance', require('./routes/teacherAttendanceRoutes'));
+app.use('/reports', require('./routes/reportRoutes'));
 
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5000;
