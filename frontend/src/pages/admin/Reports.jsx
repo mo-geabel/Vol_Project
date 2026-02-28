@@ -115,7 +115,7 @@ const Reports = () => {
     window.print();
   };
 
-  const downloadPDF = () => {
+  const downloadQuranicPDF = () => {
     if (!reportData) return;
    const doc = new jsPDF('l', 'mm', 'a4');
 
@@ -213,10 +213,11 @@ const Reports = () => {
     doc.setDrawColor(220, 220, 220);
     doc.roundedRect(margin, metaY, contentWidth, 18, 2, 2, 'FD');
     
-    const colWidth = contentWidth / 4;
+    const colWidth = contentWidth / 5;
     const metaItems = [
-      { label: t('reports.class'), value: reportData.className },
+      { label: t('reports.class'), value: reportData.className + (reportData.theory_summary?.books ? ` - ${reportData.theory_summary.books}` : '') },
       { label: t('reports.period'), value: periodText },
+      { label: t('reports.active_days'), value: String(reportData.classActiveDays || 0) },
       { label: t('common.total_students'), value: t('reports.students_count', { count: reportData.report.length }) },
       { label: t('reports.date_label'), value: format(new Date(), 'yyyy-MM-dd') }
     ];
@@ -281,10 +282,6 @@ const Reports = () => {
       t('reports.student_number'),
       t('reports.Student_Name'), 
       t('reports.Age'), 
-      t('reports.Hifz_Start'), 
-      t('reports.Hifz_End'), 
-      t('reports.Muraja_Start'), 
-      t('reports.Muraja_End'), 
       t('reports.pres.'), 
       t('reports.abs.')
     ].map(h => fixArabicText(h));
@@ -293,10 +290,6 @@ const Reports = () => {
       `${idx + 1}`,
       fixArabicText(row.name),
       row.age ? fixArabicText(`${t('reports.Age')}: ${row.age}`) : '—',
-      row.hifz.start ? fixArabicText(`${t('reports.surah')} ${row.hifz.start.surah_name} ${t('reports.verse')} ${row.hifz.start.verse}`) : '—',
-      row.hifz.end ? fixArabicText(`${t('reports.surah')} ${row.hifz.end.surah_name} ${t('reports.verse')} ${row.hifz.end.verse}`) : '—',
-      row.muraja.start ? fixArabicText(`${t('reports.surah')} ${row.muraja.start.surah_name} ${t('reports.verse')} ${row.muraja.start.verse}`) : '—',
-      row.muraja.end ? fixArabicText(`${t('reports.surah')} ${row.muraja.end.surah_name} ${t('reports.verse')} ${row.muraja.end.verse}`) : '—',
       row.attendance.activeDays,
       row.attendance.absentDays
     ]);
@@ -495,7 +488,448 @@ const Reports = () => {
     doc.save(t('reports.pdf_filename', { className: reportData.className, period: periodText.replace(' ', '_') }));
   };
 
+
+const downloadTheoryPDF = () => {
+    if (!reportData) return;
+   const doc = new jsPDF('l', 'mm', 'a4');
+
+    doc.setFont('Amiri-Regular', 'normal');
+    doc.setR2L(false); // Disable this; we are handling BiDi in our utility function
+    doc.setLanguage('ar');
+    
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 14;
+    const contentWidth = pageWidth - (margin * 2);
+    const align = isRTL ? 'right' : 'left';
+    const alignOpp = isRTL ? 'left' : 'right';
+    const xStart = isRTL ? pageWidth - margin : margin;
+    const xEnd = isRTL ? margin : pageWidth - margin;
+    
+    // === Color Palette (institutional green/gold) ===
+    const darkGreen = [0, 100, 60];
+    const gold = [180, 150, 50];
+    const darkText = [30, 30, 30];
+    const grayText = [100, 100, 100];
+    const lightGray = [245, 245, 245];
+    const white = [255, 255, 255];
+    
+    const periodText = filterType === 'monthly' 
+      ? `${monthNames[selectedMonth]} ${selectedYear}` 
+      : `${selectedYear}`;
+    const mosqueName = settings.mosqueName || t('reports.mosque_default_name');
+    const mosqueAddress = settings.mosqueAddress || '';
+    const mosquePhone = settings.mosquePhone || '';
+    
+    // =============================================
+    // PAGE 1 HEADER — Official Letterhead
+    // =============================================
+    
+    // Top gold accent line
+    doc.setFillColor(...gold);
+    doc.rect(0, 0, pageWidth, 3, 'F');
+    
+    // Green header band
+    doc.setFillColor(...darkGreen);
+    doc.rect(0, 3, pageWidth, 32, 'F');
+    
+    // Mosque name (large, centered)
+    doc.setFont('Amiri-Bold', 'normal');
+    doc.setFontSize(20);
+    doc.setTextColor(...white);
+    doc.text(fixArabicText(mosqueName), pageWidth / 2, 17, { align: 'center' });
+    
+    // Mosque address & phone (smaller, centered below)
+    if (mosqueAddress || mosquePhone) {
+      doc.setFont('Amiri-Regular', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(220, 230, 220);
+      const contactLine = [mosqueAddress, mosquePhone].filter(Boolean).join('  |  ');
+      doc.text(fixArabicText(contactLine), pageWidth / 2, 25, { align: 'center' });
+    }
+    
+    // Report title under header
+    doc.setFont('Amiri-Regular', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(200, 215, 200);
+    doc.text(fixArabicText(t('reports.quality_management')), pageWidth / 2, 31, { align: 'center' });
+    
+    // Bottom gold accent line under header
+    doc.setFillColor(...gold);
+    doc.rect(0, 35, pageWidth, 1.5, 'F');
+    
+    // =============================================
+    // Bismillah
+    // =============================================
+    doc.setFont('Amiri-Bold', 'normal');
+    doc.setFontSize(16);
+    doc.setTextColor(...darkGreen);
+    doc.text(fixArabicText(t('reports.bismillah')), pageWidth / 2, 46, { align: 'center' });
+    
+    // =============================================
+    // Report Title
+    // =============================================
+    doc.setFont('Amiri-Bold', 'normal');
+    doc.setFontSize(14);
+    doc.setTextColor(...darkText);
+    doc.text(fixArabicText(t('reports.report_title')), pageWidth / 2, 55, { align: 'center' });
+    
+    // Thin decorative line under title
+    doc.setDrawColor(...gold);
+    doc.setLineWidth(0.5);
+    doc.line(pageWidth / 2 - 40, 58, pageWidth / 2 + 40, 58);
+    
+    // =============================================
+    // Metadata Block
+    // =============================================
+    const metaY = 64;
+    doc.setFillColor(...lightGray);
+    doc.setDrawColor(220, 220, 220);
+    doc.roundedRect(margin, metaY, contentWidth, 18, 2, 2, 'FD');
+    
+    const colWidth = contentWidth / 5;
+    const metaItems = [
+      { label: t('reports.class'), value: reportData.className + (reportData.theory_summary?.books ? ` - ${reportData.theory_summary.books}` : '') },
+      { label: t('reports.period'), value: periodText },
+      { label: t('reports.active_days'), value: String(reportData.classActiveDays || 0) },
+      { label: t('common.total_students'), value: t('reports.students_count', { count: reportData.report.length }) },
+      { label: t('reports.date_label'), value: format(new Date(), 'yyyy-MM-dd') }
+    ];
+    
+    metaItems.forEach((item, i) => {
+      const colX = isRTL 
+        ? pageWidth - margin - (colWidth * (i + 1)) + colWidth / 2 
+        : margin + (colWidth * i) + colWidth / 2;
+      
+      doc.setFont('Amiri-Regular', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(...grayText);
+      doc.text(fixArabicText(item.label), colX, metaY + 7, { align: 'center' });
+      
+      doc.setFont('Amiri-Bold', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(...darkText);
+      doc.text(fixArabicText(item.value), colX, metaY + 14, { align: 'center' });
+    });
+    
+    // =============================================
+    // Activities Section
+    // =============================================
+    let currentY = metaY + 24;
+    if (classActivities) {
+      doc.setFillColor(248, 250, 248);
+      doc.setDrawColor(...darkGreen);
+      doc.setLineWidth(0.3);
+      
+      const fixedActivities = fixArabicText(classActivities);
+      const splitActivities = doc.splitTextToSize(fixedActivities, contentWidth - 16);
+      const boxHeight = (splitActivities.length * 5) + 14;
+      
+      doc.roundedRect(margin, currentY, contentWidth, boxHeight, 2, 2, 'FD');
+      
+      // Green left/right accent bar
+      doc.setFillColor(...darkGreen);
+      if (isRTL) {
+        doc.rect(pageWidth - margin - 3, currentY, 3, boxHeight, 'F');
+      } else {
+        doc.rect(margin, currentY, 3, boxHeight, 'F');
+      }
+      
+      doc.setFont('Amiri-Bold', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...darkGreen);
+      const actTitleX = isRTL ? pageWidth - margin - 8 : margin + 8;
+      doc.text(fixArabicText(t('reports.summary_activities')), actTitleX, currentY + 7, { align });
+      
+      doc.setFont('Amiri-Regular', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...darkText);
+      doc.text(splitActivities, isRTL ? pageWidth - margin - 8 : margin + 8, currentY + 13, { align });
+      
+      currentY += boxHeight + 6;
+    }
+    
+    // =============================================
+    // Student Data Table
+    // =============================================
+    const tableHeaders = [
+      t('reports.student_number'),
+      t('reports.Student_Name'), 
+      t('reports.Age'), 
+      t('reports.pres.'), 
+      t('reports.abs.')
+    ].map(h => fixArabicText(h));
+    
+    const tableData = reportData.report.map((row, idx) => [
+      `${idx + 1}`,
+      fixArabicText(row.name),
+      row.age ? fixArabicText(`${t('reports.Age')}: ${row.age}`) : '—',
+      row.attendance.activeDays,
+      row.attendance.absentDays
+    ]);
+
+    const finalHeaders = isRTL ? [...tableHeaders].reverse() : tableHeaders;
+    const finalData = isRTL ? tableData.map(row => [...row].reverse()) : tableData;
+
+    // Define column styles mapping based on visual index
+    const getColumnStyles = () => {
+      const baseStyles = {
+        0: { cellWidth: 10, halign: 'center', textColor: grayText, font: 'Amiri-Bold' },
+        1: { cellWidth: 60, halign: align, textColor: darkText, font: 'Amiri-Bold' },
+        2: { cellWidth: 16, halign: 'center' },
+        3: { cellWidth: 20, halign: 'center', textColor: [22, 120, 50], font: 'Amiri-Bold' },
+        4: { cellWidth: 20, halign: 'center', textColor: [200, 30, 30], font: 'Amiri-Bold' }
+      };
+
+      if (!isRTL) return baseStyles;
+
+      // Swap styles for RTL (reverse indices)
+      const reversedStyles = {};
+      const totalCols = tableHeaders.length;
+      Object.keys(baseStyles).forEach(idx => {
+        const newIdx = totalCols - 1 - parseInt(idx);
+        reversedStyles[newIdx] = baseStyles[idx];
+      });
+      return reversedStyles;
+    };
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [finalHeaders],
+      body: finalData,
+      theme: 'grid',
+      headStyles: { 
+        fillColor: darkGreen, 
+        textColor: white, 
+        fontStyle: 'normal', 
+        fontSize: 8, 
+        halign: 'center',
+        cellPadding: 3,
+        font: 'Amiri-Bold'
+      },
+      styles: { 
+        fontSize: 8, 
+        cellPadding: 2.5, 
+        textColor: darkText, 
+        lineColor: [200, 200, 200],
+        lineWidth: 0.2,
+        font: 'Amiri-Regular',
+        halign: 'center'
+      },
+      columnStyles: getColumnStyles(),
+      alternateRowStyles: { fillColor: [250, 253, 250] },
+      // Centering logic: margin = (pageWidth - tableWidth) / 2
+      margin: { left: (pageWidth - 126) / 2, right: (pageWidth - 126) / 2 },
+      tableLineColor: [200, 200, 200],
+      tableLineWidth: 0.2
+    });
+    
+    currentY = doc.lastAutoTable.finalY + 10;
+    
+    // =============================================
+    // Theory Topics Section
+    // =============================================
+    if (reportData.theory_summary?.topics?.length > 0) {
+      if (currentY + 40 > pageHeight - 50) { doc.addPage('l'); currentY = 20; }
+      
+      doc.setFont('Amiri-Bold', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(...darkGreen);
+      doc.text(fixArabicText(t('progress.theory.title')), pageWidth / 2, currentY, { align: 'center' });
+      currentY += 6;
+
+      const topicsHeaders = [t('student_history.col_date'), t('progress.theory.topic')].map(h => fixArabicText(h));
+      const topicsData = reportData.theory_summary.topics.map(topicObj => {
+        const dateStr = format(new Date(topicObj.date), 'yyyy-MM-dd');
+        return [dateStr, fixArabicText(topicObj.topic)];
+      });
+
+      const finalTopicsHeaders = isRTL ? [...topicsHeaders].reverse() : topicsHeaders;
+      const finalTopicsData = isRTL ? topicsData.map(r => [...r].reverse()) : topicsData;
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [finalTopicsHeaders],
+        body: finalTopicsData,
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [63, 81, 181], // Indigo / Blue 
+          textColor: white, 
+          fontStyle: 'normal', 
+          fontSize: 8, 
+          halign: 'center',
+          cellPadding: 3,
+          font: 'Amiri-Bold'
+        },
+        styles: { 
+          fontSize: 8, 
+          cellPadding: 2.5, 
+          textColor: darkText, 
+          lineColor: [200, 200, 200],
+          lineWidth: 0.2,
+          font: 'Amiri-Regular',
+          halign: 'center'
+        },
+        columnStyles: isRTL ? {
+          0: { cellWidth: 100, halign: align, font: 'Amiri-Regular' },
+          1: { cellWidth: 40, halign: 'center', font: 'Amiri-Bold', textColor: grayText }
+        } : {
+          0: { cellWidth: 40, halign: 'center', font: 'Amiri-Bold', textColor: grayText },
+          1: { cellWidth: 100, halign: align, font: 'Amiri-Regular' }
+        },
+        alternateRowStyles: { fillColor: [248, 250, 255] },
+        margin: { left: (pageWidth - 140) / 2, right: (pageWidth - 140) / 2 },
+      });
+      
+      currentY = doc.lastAutoTable.finalY + 10;
+    }
+
+    // =============================================
+    // Achievements & Notes Sections
+    // =============================================
+    if (achievements || generalNotes) {
+      if (currentY + 40 > pageHeight - 50) { doc.addPage('l'); currentY = 20; }
+      
+      const halfWidth = (contentWidth - 8) / 2;
+      
+      if (achievements) {
+        const achX = isRTL ? margin + halfWidth + 8 : margin;
+        const achW = generalNotes ? halfWidth : contentWidth;
+        
+        doc.setFillColor(240, 253, 244);
+        doc.setDrawColor(22, 120, 50);
+        doc.setLineWidth(0.3);
+        
+        const fixedAch = fixArabicText(achievements);
+        const splitAch = doc.splitTextToSize(fixedAch, achW - 14);
+        const achHeight = Math.max((splitAch.length * 5) + 14, 25);
+        
+        doc.roundedRect(achX, currentY, achW, achHeight, 2, 2, 'FD');
+        
+        doc.setFont('Amiri-Bold', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(22, 120, 50);
+        const achTextX = isRTL ? achX + achW - 6 : achX + 6;
+        doc.text(fixArabicText(t('reports.notable_achievements_title')), achTextX, currentY + 7, { align });
+        
+        doc.setFont('Amiri-Regular', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...darkText);
+        doc.text(splitAch, achTextX, currentY + 13, { align });
+      }
+      
+      if (generalNotes) {
+        const notesX = isRTL ? margin : (achievements ? margin + halfWidth + 8 : margin);
+        const notesW = achievements ? halfWidth : contentWidth;
+        
+        doc.setFillColor(239, 246, 255);
+        doc.setDrawColor(29, 78, 216);
+        doc.setLineWidth(0.3);
+        
+        const fixedNotes = fixArabicText(generalNotes);
+        const splitNotes = doc.splitTextToSize(fixedNotes, notesW - 14);
+        const notesHeight = Math.max((splitNotes.length * 5) + 14, 25);
+        
+        doc.roundedRect(notesX, currentY, notesW, notesHeight, 2, 2, 'FD');
+        
+        doc.setFont('Amiri-Bold', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(29, 78, 216);
+        const notesTextX = isRTL ? notesX + notesW - 6 : notesX + 6;
+        doc.text(fixArabicText(t('reports.general_observations_title')), notesTextX, currentY + 7, { align });
+        
+        doc.setFont('Amiri-Regular', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...darkText);
+        doc.text(splitNotes, notesTextX, currentY + 13, { align });
+      }
+    }
+    
+    // =============================================
+    // Signature Block (on last page)
+    // =============================================
+    const sigY = pageHeight - 45;
+    const sigWidth = 70;
+    
+    // Thin separator line
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(margin, sigY - 5, pageWidth - margin, sigY - 5);
+    
+    // Administrator signature (left / right for RTL)
+    const adminSigX = isRTL ? pageWidth - margin - sigWidth : margin;
+    doc.setDrawColor(...darkGreen);
+    doc.setLineWidth(0.4);
+    doc.line(adminSigX, sigY + 10, adminSigX + sigWidth, sigY + 10);
+    doc.setFont('Amiri-Bold', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...darkText);
+    doc.text(fixArabicText(t('reports.signature_label')), adminSigX + sigWidth / 2, sigY + 16, { align: 'center' });
+    
+    // Teacher signature (right / left for RTL)
+    const teacherSigX = isRTL ? margin : pageWidth - margin - sigWidth;
+    doc.line(teacherSigX, sigY + 10, teacherSigX + sigWidth, sigY + 10);
+    doc.text(fixArabicText(t('reports.teacher_signature')), teacherSigX + sigWidth / 2, sigY + 16, { align: 'center' });
+    
+    // Stamp area (center)
+    const stampX = pageWidth / 2 - 20;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.2);
+    doc.roundedRect(stampX, sigY - 2, 40, 20, 10, 10, 'D');
+    doc.setFont('Amiri-Regular', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(...grayText);
+    doc.text(fixArabicText(t('reports.stamp_area')), pageWidth / 2, sigY + 9, { align: 'center' });
+    
+    // Date under signatures
+    doc.setFontSize(7);
+    doc.setTextColor(...grayText);
+    doc.text(
+      fixArabicText(t('reports.generated_on', { date: format(new Date(), 'yyyy-MM-dd') })),
+      pageWidth / 2, sigY + 22, { align: 'center' }
+    );
+    
+    // =============================================
+    // Footer on every page — branding + page numbers
+    // =============================================
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      
+      // Bottom gold line
+      doc.setFillColor(...gold);
+      doc.rect(0, pageHeight - 8, pageWidth, 1, 'F');
+      
+      // Footer text
+      doc.setFont('Amiri-Regular', 'normal');
+      doc.setFontSize(6.5);
+      doc.setTextColor(150, 150, 150);
+      doc.text(
+        fixArabicText(t('reports.footer_branding', { page: i, total: totalPages })),
+        pageWidth / 2,
+        pageHeight - 4,
+        { align: 'center' }
+      );
+    }
+
+    doc.save(t('reports.pdf_filename', { className: reportData.className, period: periodText.replace(' ', '_') }));
+  };
+
+
+  const downloadPDF = () => {
+    if (!reportData) return;
+    
+    const selectedClassObj = classes.find(c => c.id === Number(selectedClass));
+    if (selectedClassObj?.type === 'Theory') {
+      downloadTheoryPDF();
+    } else {
+      downloadQuranicPDF();
+    }
+  };
+  
   if (loading) return <div className="p-8 text-center text-primary-600 font-medium">Loading classes...</div>;
+
+  const isSelectedTheory = classes.find(c => c.id === Number(selectedClass))?.type === 'Theory';
 
   return (
     <div className="p-6 max-w-full mx-auto space-y-6">
@@ -655,14 +1089,21 @@ const Reports = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 w-full max-w-4xl border-t border-gray-200 mt-8 pt-8">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-8 w-full max-w-5xl border-t border-gray-200 mt-8 pt-8">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('reports.class')}</span>
-                  <span className="text-sm font-black text-primary-700">{reportData.className}</span>
+                  <span className="text-sm font-black text-primary-700">
+                    {reportData.className}
+                    {isSelectedTheory && reportData.theory_summary?.books && <span className="text-gray-500 font-normal"> - {reportData.theory_summary.books}</span>}
+                  </span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('reports.period')}</span>
                   <span className="text-sm font-black text-secondary-700 lowercase first-letter:uppercase">{filterType === 'monthly' ? `${monthNames[selectedMonth]} ${selectedYear}` : selectedYear}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('reports.active_days')}</span>
+                  <span className="text-sm font-black text-gray-900">{reportData.classActiveDays || 0}</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('common.students')}</span>
@@ -693,8 +1134,12 @@ const Reports = () => {
                   <tr className="bg-gray-50/50">
                     <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'} text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100`}>{t('reports.student_name')}</th>
                     <th className="p-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">{t('reports.age')}</th>
-                    <th className="p-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 bg-amber-50/30" colSpan="2">{t('reports.hifz_progress')}</th>
-                    <th className="p-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 bg-blue-50/30" colSpan="2">{t('reports.muraja_progress')}</th>
+                    {!isSelectedTheory && (
+                      <>
+                        <th className="p-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 bg-amber-50/30" colSpan="2">{t('reports.hifz_progress')}</th>
+                        <th className="p-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 bg-blue-50/30" colSpan="2">{t('reports.muraja_progress')}</th>
+                      </>
+                    )}
                     <th className="p-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">{t('reports.pres')}</th>
                     <th className="p-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">{t('reports.abs')}</th>
                   </tr>
@@ -705,19 +1150,23 @@ const Reports = () => {
                       <td className={`p-4 font-bold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{row.name}</td>
                       <td className="p-4 text-center text-xs font-black text-gray-400">{row.age || '—'}</td>
                       
-                      <td className="p-4 text-center text-xs bg-amber-50/10 italic text-gray-500 border-r border-amber-100/30">
-                        {row.hifz.start ? `${row.hifz.start.surah_name} ${row.hifz.start.verse}` : '—'}
-                      </td>
-                      <td className="p-4 text-center text-xs bg-amber-50/10 font-bold text-amber-700">
-                        {row.hifz.end ? `${row.hifz.end.surah_name} ${row.hifz.end.verse}` : '—'}
-                      </td>
-                      
-                      <td className="p-4 text-center text-xs bg-blue-50/10 italic text-gray-500 border-r border-blue-100/30">
-                        {row.muraja.start ? `${row.muraja.start.surah_name} ${row.muraja.start.verse}` : '—'}
-                      </td>
-                      <td className="p-4 text-center text-xs bg-blue-50/10 font-bold text-blue-700">
-                        {row.muraja.end ? `${row.muraja.end.surah_name} ${row.muraja.end.verse}` : '—'}
-                      </td>
+                      {!isSelectedTheory && (
+                        <>
+                          <td className="p-4 text-center text-xs bg-amber-50/10 italic text-gray-500 border-r border-amber-100/30">
+                            {row.hifz.start ? `${row.hifz.start.surah_name} ${row.hifz.start.verse}` : '—'}
+                          </td>
+                          <td className="p-4 text-center text-xs bg-amber-50/10 font-bold text-amber-700">
+                            {row.hifz.end ? `${row.hifz.end.surah_name} ${row.hifz.end.verse}` : '—'}
+                          </td>
+                          
+                          <td className="p-4 text-center text-xs bg-blue-50/10 italic text-gray-500 border-r border-blue-100/30">
+                            {row.muraja.start ? `${row.muraja.start.surah_name} ${row.muraja.start.verse}` : '—'}
+                          </td>
+                          <td className="p-4 text-center text-xs bg-blue-50/10 font-bold text-blue-700">
+                            {row.muraja.end ? `${row.muraja.end.surah_name} ${row.muraja.end.verse}` : '—'}
+                          </td>
+                        </>
+                      )}
                       
                       <td className="p-4 text-center">
                         <span className="text-sm font-black text-green-600">{row.attendance.activeDays}</span>
@@ -730,6 +1179,37 @@ const Reports = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Theory Topics History Rendering */}
+            {isSelectedTheory && reportData.theory_summary?.topics?.length > 0 && (
+              <div className="p-8 border-t border-gray-100 bg-white">
+                <h3 className={`text-lg font-black text-gray-900 mb-4 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <BookOpen size={20} className="text-primary-600"/> {t('progress.theory.title')}
+                </h3>
+                <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'} text-[10px] font-black text-gray-400 uppercase tracking-widest`}>{t('student_history.col_date')}</th>
+                        <th className={`p-4 ${isRTL ? 'text-right' : 'text-left'} text-[10px] font-black text-gray-400 uppercase tracking-widest`}>{t('progress.theory.topic')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {reportData.theory_summary.topics.map((topic, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50/50">
+                          <td className={`p-3 font-bold text-gray-600 ${isRTL ? 'text-right' : 'text-left'}`}>
+                            {format(new Date(topic.date), 'dd MMMM yyyy')}
+                          </td>
+                          <td className={`p-3 text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>
+                            {topic.topic}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Global Sections (Bottom) */}
             {(achievements || generalNotes) && (

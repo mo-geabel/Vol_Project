@@ -72,16 +72,17 @@ const createClass = async (req, res) => {
   try {
     const { class_name, type, teacher_id, schedule_settings } = req.body;
 
-    if (!class_name || !type || !teacher_id) {
+    if (!class_name || !type) {
       return res.status(400).json({ message: 'Please add all required fields' });
     }
+
 
     const newClass = await prisma.class.create({
       data: {
         class_name,
         type,
-        teacher_id: teacher_id ? Number(teacher_id) : null,
-        book_title: book_title || null,
+        teacher: teacher_id ? { connect: { id: Number(teacher_id) } } : undefined,
+        book_title: req.body.book_title || null,
         schedule_settings: schedule_settings || {},
       },
     });
@@ -89,7 +90,7 @@ const createClass = async (req, res) => {
     res.status(201).json(newClass);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 
@@ -108,13 +109,17 @@ const updateClass = async (req, res) => {
       return res.status(404).json({ message: 'Class not found' });
     }
 
+    const finalType = type || classExists.type;
+    const finalTeacherId = teacher_id !== undefined ? (teacher_id ? Number(teacher_id) : null) : classExists.teacher_id;
+
+
     const updatedClass = await prisma.class.update({
       where: { id: Number(req.params.id) },
       data: {
         class_name: class_name || classExists.class_name,
-        type: type || classExists.type,
-        teacher_id: teacher_id !== undefined ? (teacher_id ? Number(teacher_id) : null) : classExists.teacher_id,
-        book_title: book_title !== undefined ? book_title : classExists.book_title,
+        type: finalType,
+        teacher: finalTeacherId !== undefined ? (finalTeacherId ? { connect: { id: finalTeacherId } } : { disconnect: true }) : undefined,
+        book_title: req.body.book_title !== undefined ? req.body.book_title : classExists.book_title,
         schedule_settings: schedule_settings || classExists.schedule_settings,
       },
     });
@@ -122,7 +127,7 @@ const updateClass = async (req, res) => {
     res.json(updatedClass);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 

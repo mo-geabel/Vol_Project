@@ -212,9 +212,110 @@ const deleteEnrollment = async (req, res) => {
   }
 };
 
+// @desc    Get enrollment oversight analytics
+// @route   GET /api/enrollments/oversight
+// @access  Private/Admin
+const getEnrollmentOversight = async (req, res) => {
+  try {
+    const { year, month } = req.query;
+    const now = new Date();
+    const filterYear = year ? Number(year) : now.getFullYear();
+    const filterMonth = month ? Number(month) : now.getMonth() + 1; // 1-indexed
+
+    const monthYear = `${filterYear}-${String(filterMonth).padStart(2, '0')}`;
+    
+    // Get Quranic enrollments
+    const enrollments = await prisma.enrollment.findMany({
+      where: {
+        class: { type: 'Quran' }
+      },
+      include: {
+        student: { select: { name: true } },
+        class: { select: { class_name: true, schedule_settings: true } },
+      }
+    });
+
+    const thresholdSetting = await prisma.systemSetting.findUnique({ where: { key: 'attendanceThreshold' } });
+    const threshold = thresholdSetting ? Number(thresholdSetting.value) : 60;
+
+    // Get filter month schedule for each class or default
+    const schedules = await prisma.schedule.findMany({
+      where: { month_year: monthYear }
+    });
+
+    const isCurrentMonth = filterYear === now.getFullYear() && filterMonth === (now.getMonth() + 1);
+
+    const oversightData = await Promise.all(enrollments.map(async (e) => {
+      // Find schedule for this class or use global default
+      const schedule = schedules.find(s => s.class_id === e.class_id) || 
+                       schedules.find(s => s.class_id === null) || 
+                       { month_year: monthYear, weekend_config: [5, 6], manual_overrides: {} };
+
+      // Re-use calculation logic
+      const calculateActivePassed = (monthYearStr, weekendConfig, manualOverrides) => {
+        const [y, m] = monthYearStr.split('-').map(Number);
+        const numDaysInMonth = new Date(y, m, 0).getDate();
+        const overrides = manualOverrides || {};
+        const compareDay = isCurrentMonth ? now.getDate() : numDaysInMonth;
+        let passed = 0;
+
+        for (let d = 1; d <= numDaysInMonth; d++) {
+          if (d > compareDay) break;
+          const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const dateObj = new Date(y, m - 1, d);
+          const dayOfWeek = dateObj.getDay();
+          let isActive = overrides[dateStr] ? (overrides[dateStr] === 'Active') : !weekendConfig.includes(dayOfWeek);
+          if (isActive) passed++;
+        }
+        return passed;
+      };
+
+      const activePassed = calculateActivePassed(schedule.month_year, schedule.weekend_config, schedule.manual_overrides);
+      
+      const absentCount = await prisma.attendance.count({
+        where: {
+          enrollment_id: e.id,
+          status: 'Absent',
+          date: {
+            gte: new Date(filterYear, filterMonth - 1, 1),
+            lte: new Date(filterYear, filterMonth, 0, 23, 59, 59)
+          }
+        }
+      });
+
+      const percentage = activePassed > 0 ? (absentCount / activePassed) * 100 : 0;
+      
+      // Grace Period Logic
+      const regDate = new Date(e.createdAt);
+      const isGracePeriod = regDate.getFullYear() === filterYear && regDate.getMonth() === (filterMonth - 1);
+
+      return {
+        id: e.id,
+        studentName: e.student.name,
+        className: e.class.class_name,
+        status: e.status,
+        absentCount,
+        activeDays: activePassed,
+        percentage: percentage.toFixed(1),
+        isGracePeriod,
+        isOverThreshold: percentage > threshold && !isGracePeriod
+      };
+    }));
+
+    res.json({
+      threshold,
+      data: oversightData
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getEnrollments,
   createEnrollment,
   updateEnrollment,
   deleteEnrollment,
+  getEnrollmentOversight,
 };

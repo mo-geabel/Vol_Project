@@ -8,16 +8,15 @@ const getTeacherStats = async (req, res) => {
   try {
     const teacherId = req.user.id;
 
-    const [classCount, enrollmentCount] = await Promise.all([
+    const [classCount, totalEnrollments, disabledEnrollments] = await Promise.all([
       prisma.class.count({
         where: { teacher_id: teacherId }
       }),
       prisma.enrollment.count({
-        where: {
-          class: {
-            teacher_id: teacherId
-          }
-        }
+        where: { class: { teacher_id: teacherId }, status: 'Active' }
+      }),
+      prisma.enrollment.count({
+        where: { class: { teacher_id: teacherId }, status: 'Disabled' }
       })
     ]);
 
@@ -49,7 +48,8 @@ const getTeacherStats = async (req, res) => {
 
     res.json({
       classes: classCount,
-      students: enrollmentCount,
+      students: totalEnrollments - disabledEnrollments,
+      disabledStudents: disabledEnrollments,
       pendingActions: pendingActions
     });
   } catch (error) {
@@ -68,18 +68,21 @@ const getTeacherClasses = async (req, res) => {
     const classes = await prisma.class.findMany({
       where: { teacher_id: teacherId },
       include: {
-        _count: {
-          select: { enrollments: true }
-        }
+        enrollments: { select: { status: true } }
       }
     });
 
-    const formattedClasses = classes.map(c => ({
-      id: c.id,
-      name: c.class_name,
-      type: c.type,
-      studentCount: c._count.enrollments
-    }));
+    const formattedClasses = classes.map(c => {
+      const total = c.enrollments.length;
+      const disabled = c.enrollments.filter(e => e.status === 'Disabled').length;
+      return {
+        id: c.id,
+        name: c.class_name,
+        type: c.type,
+        studentCount: total - disabled,
+        disabledCount: disabled
+      };
+    });
 
     res.json(formattedClasses);
   } catch (error) {
@@ -132,6 +135,7 @@ const getTeacherTopStudents = async (req, res) => {
           id: enr.student_id,
           name: enr.student.name,
           class: enr.class.class_name,
+          type: enr.class.type,
           present_count: stat._count.status,
           score: stat._count.status
         };
@@ -178,6 +182,7 @@ const getTeacherTopStudents = async (req, res) => {
           id: enr.student_id,
           name: enr.student.name,
           class: enr.class.class_name,
+          type: enr.class.type,
           progress_count: scoreData.pos,
           score: scoreData.total
         };
@@ -186,7 +191,47 @@ const getTeacherTopStudents = async (req, res) => {
 
     const topPerformance = Object.values(classPerformanceMap).slice(0, 3); // Top 3 class reps
 
-    res.json({ attendance: topAttendance, performance: topPerformance });
+    // Best Rated student PER CLASS
+    const ratedStats = await prisma.quranProgress.groupBy({
+      by: ['enrollment_id'],
+      where: {
+        enrollment: { class_id: { in: classIds } },
+        rating: { not: null }
+      },
+      _avg: { rating: true },
+      _count: { rating: true }
+    });
+
+    // Valid ratings (>= 3 records)
+    const validRatings = ratedStats.filter(r => r._count.rating >= 3);
+    
+    const ratedEnrollmentIds = validRatings.map(r => r.enrollment_id);
+    const ratedEnrollments = await prisma.enrollment.findMany({
+      where: { id: { in: ratedEnrollmentIds } },
+      include: { student: true, class: true }
+    });
+
+    const classRatedMap = {};
+    validRatings.forEach(stat => {
+      const enr = ratedEnrollments.find(e => e.id === stat.enrollment_id);
+      if (!enr) return;
+      const classId = enr.class_id;
+
+      if (!classRatedMap[classId] || classRatedMap[classId].score < stat._avg.rating) {
+        classRatedMap[classId] = {
+          id: enr.student_id,
+          name: enr.student.name,
+          class: enr.class.class_name,
+          type: enr.class.type,
+          avg_rating: stat._avg.rating?.toFixed(1) || 0,
+          score: stat._avg.rating
+        };
+      }
+    });
+
+    const topRated = Object.values(classRatedMap).slice(0, 3); // Top 3 class reps
+
+    res.json({ attendance: topAttendance, performance: topPerformance, rated: topRated });
   } catch (error) {
     console.error('Error fetching teacher top students:', error);
     res.status(500).json({ message: 'Server error' });
@@ -205,40 +250,76 @@ const getTeacherDashboardGraphs = async (req, res) => {
     });
     const classIds = teacherClasses.map(c => c.id);
 
-    const today = new Date();
-    const lastWeek = new Date(today);
-    lastWeek.setDate(today.getDate() - 6);
-    lastWeek.setHours(0, 0, 0, 0);
-
-    const attendances = await prisma.attendance.groupBy({
-      by: ['date', 'status'],
-      where: {
-        date: { gte: lastWeek },
-        enrollment: { class_id: { in: classIds } }
-      },
-      _count: { status: true },
-      orderBy: { date: 'asc' }
+    // Get last 7 active dates for Quranic
+    const quranActive = await prisma.attendance.findMany({
+      where: { enrollment: { class_id: { in: classIds }, class: { type: { not: 'Theory' } } } },
+      distinct: ['date'],
+      orderBy: { date: 'desc' },
+      select: { date: true },
+      take: 7
     });
 
-    const daysMap = {};
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(lastWeek);
-      d.setDate(d.getDate() + i);
+    // Get last 7 active dates for Theory
+    const theoryActive = await prisma.attendance.findMany({
+      where: { enrollment: { class_id: { in: classIds }, class: { type: 'Theory' } } },
+      distinct: ['date'],
+      orderBy: { date: 'desc' },
+      select: { date: true },
+      take: 7
+    });
+
+    const quranDatesObj = quranActive.map(a => a.date);
+    const theoryDatesObj = theoryActive.map(a => a.date);
+    const allRelevantDates = [...quranDatesObj, ...theoryDatesObj];
+
+    const quranDaysMap = {};
+    const theoryDaysMap = {};
+
+    [...quranDatesObj].sort((a, b) => a - b).forEach(d => {
       const dateStr = d.toISOString().split('T')[0];
-      daysMap[dateStr] = { date: dateStr, present: 0, absent: 0, excused: 0 };
+      quranDaysMap[dateStr] = { date: dateStr, present: 0, absent: 0, excused: 0 };
+    });
+
+    [...theoryDatesObj].sort((a, b) => a - b).forEach(d => {
+      const dateStr = d.toISOString().split('T')[0];
+      theoryDaysMap[dateStr] = { date: dateStr, present: 0, absent: 0, excused: 0 };
+    });
+
+    if (allRelevantDates.length > 0) {
+      const attendances = await prisma.attendance.groupBy({
+        by: ['date', 'status', 'enrollment_id'],
+        where: { 
+          date: { in: allRelevantDates },
+          enrollment: { class_id: { in: classIds } }
+        },
+        _count: { status: true }
+      });
+
+      const enrollmentIds = [...new Set(attendances.map(a => a.enrollment_id))];
+      const enrollments = await prisma.enrollment.findMany({
+        where: { id: { in: enrollmentIds } },
+        include: { class: { select: { type: true } } }
+      });
+
+      attendances.forEach(a => {
+        const enr = enrollments.find(e => e.id === a.enrollment_id);
+        if (!enr) return;
+
+        const mapToUse = enr.class.type === 'Theory' ? theoryDaysMap : quranDaysMap;
+        const dateStr = a.date.toISOString().split('T')[0];
+        
+        if (mapToUse[dateStr]) {
+          if (a.status === 'Present') mapToUse[dateStr].present += a._count.status;
+          if (a.status === 'Absent') mapToUse[dateStr].absent += a._count.status;
+          if (a.status === 'Excused') mapToUse[dateStr].excused += a._count.status;
+        }
+      });
     }
 
-    attendances.forEach(a => {
-      const dateStr = a.date.toISOString().split('T')[0];
-      if (daysMap[dateStr]) {
-        if (a.status === 'Present') daysMap[dateStr].present = a._count.status;
-        if (a.status === 'Absent') daysMap[dateStr].absent = a._count.status;
-        if (a.status === 'Excused') daysMap[dateStr].excused = a._count.status;
-      }
-    });
-
     res.json({
-      attendanceTrend: Object.values(daysMap)
+      attendanceTrend: Object.values(quranDaysMap), // Keeps backwards compat
+      quranTrend: Object.values(quranDaysMap),
+      theoryTrend: Object.values(theoryDaysMap)
     });
   } catch (error) {
     console.error('Error fetching teacher graphs:', error);

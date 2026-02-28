@@ -193,7 +193,6 @@ const Classes = () => {
                         <option key={t.id} value={t.id}>{t.name} ({t.role})</option>
                       ))}
                     </select>
-                    <p className={`mt-1 text-xs text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('classes.teacher_hint')}</p>
                   </div>
 
                   {formData.type === 'Theory' && (

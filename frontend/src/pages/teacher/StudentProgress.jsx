@@ -70,9 +70,11 @@ const StudentProgress = () => {
   if (loading) return <div className="p-8 text-center text-primary-600 font-medium">{t('student_history.loading')}</div>;
   if (!data) return <div className="p-8 text-center">{t('student_history.not_found')}</div>;
 
-  const { enrollment, quran, theory, attendance } = data;
-  const isTheoryClass = enrollment.class.type === 'Theory';
-  const progressRecords = isTheoryClass ? theory : quran;
+  const { enrollment, quran = [], theory = [], attendance = [], allEnrollments = [] } = data || {};
+  if (!enrollment) return <div className="p-8 text-center">{t('student_history.not_found')}</div>;
+  
+  const isTheoryClass = enrollment.class?.type === 'Theory';
+  const progressRecords = isTheoryClass ? (theory || []) : (quran || []);
 
   // Helper for filtering
   const isMonthMatch = (dateStr, m, y) => {
@@ -136,26 +138,32 @@ const StudentProgress = () => {
     return true;
   });
 
+  // --- Log Type Check ---
+  const validRecords = Array.isArray(progressRecords) ? progressRecords : [];
+  const validAttendance = Array.isArray(attendance) ? attendance : [];
+
   // --- CHART DATA ---
-  const filteredForCharts = filterMode === 'Monthly' ? progressRecords.filter(p => isMonthMatch(p.date, selectedMonth, selectedYear)) : progressRecords;
+  const filteredForCharts = filterMode === 'Monthly' 
+    ? validRecords.filter(p => isMonthMatch(p.date, selectedMonth, selectedYear)) 
+    : validRecords;
   
-  const hifzChart = !isTheoryClass ? [...filteredForCharts].filter(p => p.type === 'Hifz' && p.rating !== null).reverse().map(p => ({
-    date: format(new Date(p.date), 'MM/dd'),
-    fullDate: format(new Date(p.date), 'MMM dd, yyyy'),
+  const hifzChart = !isTheoryClass ? [...filteredForCharts].filter(p => p.type === 'Hifz' && p?.rating !== null).reverse().map(p => ({
+    date: p.date ? format(new Date(p.date), 'MM/dd') : '-',
+    fullDate: p.date ? format(new Date(p.date), 'MMM dd, yyyy') : '-',
     rating: p.rating
   })) : [];
 
-  const murajaChart = !isTheoryClass ? [...filteredForCharts].filter(p => p.type === 'Muraja' && p.rating !== null).reverse().map(p => ({
-    date: format(new Date(p.date), 'MM/dd'),
-    fullDate: format(new Date(p.date), 'MMM dd, yyyy'),
+  const murajaChart = !isTheoryClass ? [...filteredForCharts].filter(p => p.type === 'Muraja' && p?.rating !== null).reverse().map(p => ({
+    date: p.date ? format(new Date(p.date), 'MM/dd') : '-',
+    fullDate: p.date ? format(new Date(p.date), 'MMM dd, yyyy') : '-',
     rating: p.rating
   })) : [];
 
   const attChart = [...filteredForCharts].slice(0, 15).reverse().map(a => {
-    const att = attendance.find(att => format(new Date(att.date), 'yyyy-MM-dd') === format(new Date(a.date), 'yyyy-MM-dd'));
+    const att = validAttendance.find(att => att.date && a.date && format(new Date(att.date), 'yyyy-MM-dd') === format(new Date(a.date), 'yyyy-MM-dd'));
     return {
-      date: format(new Date(a.date), 'MM/dd'),
-      fullDate: format(new Date(a.date), 'MMM dd, yyyy'),
+      date: a.date ? format(new Date(a.date), 'MM/dd') : '-',
+      fullDate: a.date ? format(new Date(a.date), 'MMM dd, yyyy') : '-',
       status: att?.status === 'Present' ? 1 : 0
     };
   });
@@ -175,7 +183,7 @@ const StudentProgress = () => {
           <div className="flex items-center gap-3 sm:gap-4">
             <button 
               onClick={() => navigate(-1)}
-              className={`p-2 sm:p-2.5 hover:bg-gray-50 rounded-xl sm:rounded-2xl transition-all text-gray-400 hover:text-primary-600 border border-transparent hover:border-primary-100 shadow-xs active:scale-95 ${isRTL ? 'rotate-180' : ''}`}
+              className="p-2 sm:p-2.5 hover:bg-gray-50 rounded-xl sm:rounded-2xl transition-all text-gray-400 hover:text-primary-600 border border-transparent hover:border-primary-100 shadow-xs active:scale-95"
             >
               <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
             </button>
@@ -192,8 +200,11 @@ const StudentProgress = () => {
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
                 <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse"></span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${enrollment.status === 'Active' ? 'bg-primary-500' : 'bg-red-500'} animate-pulse`}></span>
                   {enrollment.class.class_name}
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-black tracking-tighter ${enrollment.status === 'Active' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                    {enrollment.status === 'Active' ? t('common.active') : t('common.disabled')}
+                  </span>
                 </p>
                 {enrollment.student.contact_info && (
                   <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold">
@@ -202,7 +213,7 @@ const StudentProgress = () => {
                   </div>
                 )}
                 {enrollment.student.parent_info && (
-                  <div className={`flex items-center gap-1.5 text-[10px] text-gray-400 font-bold ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold">
                     <User2 size={12} className="text-primary-400" />
                     <span>{t('student_history.parent_details')}: {enrollment.student.parent_info}</span>
                   </div>
@@ -211,7 +222,7 @@ const StudentProgress = () => {
             </div>
           </div>
 
-          <div className={`flex items-center gap-1.5 sm:gap-2 bg-gray-100/50 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border border-gray-100 self-start sm:self-auto overflow-x-auto no-scrollbar max-w-full ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-gray-100/50 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border border-gray-100 self-start sm:self-auto overflow-x-auto no-scrollbar max-w-full">
             <button 
               onClick={() => setFilterMode('Overall')}
               className={`whitespace-nowrap px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all ${filterMode === 'Overall' ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
@@ -226,18 +237,18 @@ const StudentProgress = () => {
             </button>
             
             {filterMode === 'Monthly' && (
-              <div className={`flex items-center gap-1 ${isRTL ? 'border-r pr-1.5 sm:pr-2 mr-1.5 sm:mr-2' : 'border-l pl-1.5 sm:pl-2 ml-1.5 sm:ml-2'} border-gray-200`}>
+              <div className="flex items-center gap-1 border-s ps-1.5 sm:ps-2 ms-1.5 sm:ms-2 border-gray-200">
                 <select 
                   value={selectedMonth} 
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className={`bg-transparent border-none text-[10px] sm:text-xs font-black text-gray-700 focus:ring-0 cursor-pointer appearance-none py-1 ${isRTL ? 'text-right' : 'text-left'}`}
+                  className="bg-transparent border-none text-[10px] sm:text-xs font-black text-gray-700 focus:ring-0 cursor-pointer appearance-none py-1"
                 >
                   {months.map((m, i) => <option key={m} value={i}>{m.slice(0, 3)}</option>)}
                 </select>
                 <select 
                   value={selectedYear} 
                   onChange={(e) => setSelectedYear(e.target.value)}
-                  className={`bg-transparent border-none text-[10px] sm:text-xs font-black text-gray-700 focus:ring-0 cursor-pointer appearance-none py-1 ${isRTL ? 'text-right' : 'text-left'}`}
+                  className="bg-transparent border-none text-[10px] sm:text-xs font-black text-gray-700 focus:ring-0 cursor-pointer appearance-none py-1"
                 >
                   {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
@@ -245,71 +256,116 @@ const StudentProgress = () => {
             )}
           </div>
         </div>
+
+        {/* Multi-Class Switcher */}
+        {allEnrollments.length > 1 && (
+          <div className="flex items-center gap-1.5 p-1 bg-gray-50 rounded-xl border border-gray-100 mt-2 self-start ring-1 ring-black/5 overflow-x-auto no-scrollbar max-w-full">
+            {allEnrollments.map((en) => (
+              <button
+                key={en.id}
+                onClick={() => navigate(`/teacher/progress/${en.id}`)}
+                className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                  Number(enrollmentId) === en.id 
+                    ? 'bg-white text-primary-600 shadow-sm ring-1 ring-gray-200' 
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${en.class.type === 'Quran' ? 'bg-amber-500' : 'bg-indigo-500'}`}></div>
+                {en.class.class_name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Comparison Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {/* Hifz card */}
-        <div className="card p-5 sm:p-6 border-t-4 border-amber-500">
-          <h3 className={`text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <Star size={14} className="text-amber-500" /> {t('student_history.hifz_avg')}
-          </h3>
-          <div className={`flex items-end justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <div className={isRTL ? 'text-right' : 'text-left'}>
-              <p className="text-[10px] font-bold text-gray-400 uppercase">{t('student_history.overall')}</p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl sm:text-3xl font-black text-gray-900">{overallStats.hifzAvg}</span>
+        {!isTheoryClass ? (
+          <>
+            {/* Hifz card */}
+            <div className="card p-5 sm:p-6 border-t-4 border-amber-500">
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4">
+                <Star size={14} className="text-amber-500" /> {t('student_history.hifz_avg')}
+              </h3>
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">{t('student_history.overall')}</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl sm:text-3xl font-black text-gray-900">{overallStats.hifzAvg}</span>
+                  </div>
+                </div>
+                {filterMode === 'Monthly' && (
+                  <div className="text-end">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">{months[selectedMonth]?.slice(0, 3)}</p>
+                    <span className={`text-lg sm:text-xl font-black ${Number(monthlyStats.hifzAvg) >= Number(overallStats.hifzAvg) ? 'text-green-600' : 'text-amber-600'}`}>
+                      {monthlyStats.hifzAvg}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
-            {filterMode === 'Monthly' && (
-              <div className={isRTL ? 'text-left' : 'text-right'}>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">{months[selectedMonth].slice(0, 3)}</p>
-                <span className={`text-lg sm:text-xl font-black ${Number(monthlyStats.hifzAvg) >= Number(overallStats.hifzAvg) ? 'text-green-600' : 'text-amber-600'}`}>
-                  {monthlyStats.hifzAvg}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Muraja card */}
-        <div className="card p-5 sm:p-6 border-t-4 border-blue-500">
-          <h3 className={`text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <BookOpen size={14} className="text-blue-500" /> {t('student_history.muraja_avg')}
-          </h3>
-          <div className={`flex items-end justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <div className={isRTL ? 'text-right' : 'text-left'}>
-              <p className="text-[10px] font-bold text-gray-400 uppercase">{t('student_history.overall')}</p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl sm:text-3xl font-black text-gray-900">{overallStats.murajaAvg}</span>
+            {/* Muraja card */}
+            <div className="card p-5 sm:p-6 border-t-4 border-blue-500">
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4">
+                <BookOpen size={14} className="text-blue-500" /> {t('student_history.muraja_avg')}
+              </h3>
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">{t('student_history.overall')}</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl sm:text-3xl font-black text-gray-900">{overallStats.murajaAvg}</span>
+                  </div>
+                </div>
+                {filterMode === 'Monthly' && (
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">{months[selectedMonth]?.slice(0, 3)}</p>
+                    <span className={`text-lg sm:text-xl font-black ${Number(monthlyStats.murajaAvg) >= Number(overallStats.murajaAvg) ? 'text-green-600' : 'text-blue-600'}`}>
+                      {monthlyStats.murajaAvg}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
-            {filterMode === 'Monthly' && (
-              <div className={isRTL ? 'text-left' : 'text-right'}>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">{months[selectedMonth].slice(0, 3)}</p>
-                <span className={`text-lg sm:text-xl font-black ${Number(monthlyStats.murajaAvg) >= Number(overallStats.murajaAvg) ? 'text-green-600' : 'text-blue-600'}`}>
-                  {monthlyStats.murajaAvg}
-                </span>
+          </>
+        ) : (
+          <>
+            {/* Latest Topic Card */}
+            <div className="card p-5 sm:p-6 border-t-4 border-indigo-500">
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4">
+                <BookOpen size={14} className="text-indigo-500" /> {t('progress.theory.latest_topic') || 'Latest Topic'}
+              </h3>
+              <div className="flex flex-col">
+                <span className="text-sm font-black text-gray-900 truncate">{theory[0]?.topic_name || '—'}</span>
+                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase truncate">{theory[0]?.book_title || '—'}</span>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+            {/* Total Sessions Card */}
+            <div className="card p-5 sm:p-6 border-t-4 border-teal-500">
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4">
+                <TrendingUp size={14} className="text-teal-500" /> {t('progress.theory.total_sessions') || 'Total Sessions'}
+              </h3>
+              <p className="text-2xl sm:text-3xl font-black text-gray-900">{theory.length}</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">{t('student_history.lifetime')}</p>
+            </div>
+          </>
+        )}
 
         {/* Attendance card */}
         <div className="card p-5 sm:p-6 border-t-4 border-primary-500">
-          <h3 className={`text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4">
             <CheckCircle2 size={14} className="text-primary-500" /> {t('student_history.attendance')}
           </h3>
-          <div className={`flex items-end justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className="flex items-end justify-between">
+            <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase">{t('student_history.all_time')}</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl sm:text-3xl font-black text-gray-900">{overallStats.attendanceRate}%</span>
               </div>
             </div>
             {filterMode === 'Monthly' && (
-              <div className={isRTL ? 'text-left' : 'text-right'}>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">{months[selectedMonth].slice(0, 3)}</p>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase">{months[selectedMonth]?.slice(0, 3)}</p>
                 <span className={`text-lg sm:text-xl font-black ${monthlyStats.attendanceRate >= overallStats.attendanceRate ? 'text-green-600' : 'text-red-600'}`}>
                   {monthlyStats.attendanceRate}%
                 </span>
@@ -320,11 +376,11 @@ const StudentProgress = () => {
 
         {/* Total logs */}
         <div className="card p-5 sm:p-6 border-t-4 border-gray-300">
-          <h3 className={`text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 mb-3 sm:mb-4">
             <History size={14} className="text-gray-400" /> {t('student_history.logs')}
           </h3>
-          <div className={`flex items-end justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className="flex items-end justify-between">
+            <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase">{t('common.total')}</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl sm:text-3xl font-black text-gray-900">
@@ -332,59 +388,56 @@ const StudentProgress = () => {
                 </span>
               </div>
             </div>
-            <div className={isRTL ? 'text-left' : 'text-right'}>
-              <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 px-2 py-1 bg-gray-50 rounded-lg">
-                {filterMode === 'Monthly' ? t('student_history.this_month') : t('student_history.lifetime')}
-              </span>
-            </div>
           </div>
         </div>
       </div>
 
       {/* Main Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card p-5 sm:p-8">
-          <h3 className={`text-xs sm:text-sm font-black text-gray-900 uppercase tracking-widest mb-6 sm:mb-8 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <TrendingUp size={18} className="text-primary-600" /> {t('student_history.performance_history')}
-          </h3>
-          <div className="h-[250px] sm:h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart>
-                <defs>
-                  <linearGradient id="colorHifz" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorMuraja" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: '#9ca3af', fontSize: 10, fontWeight: 700}}
-                />
-                <YAxis 
-                  domain={[0, 10]} 
-                  axisLine={false} 
-                  tickLine={false}
-                  tick={{fill: '#9ca3af', fontSize: 10, fontWeight: 700}}
-                />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', textAlign: 'start' }}
-                />
-                <Area data={hifzChart} type="monotone" dataKey="rating" stroke="#f59e0b" strokeWidth={3} fill="url(#colorHifz)" name={t('common.hifz')} />
-                <Area data={murajaChart} type="monotone" dataKey="rating" stroke="#3b82f6" strokeWidth={3} fill="url(#colorMuraja)" name={t('common.muraja')} />
-              </AreaChart>
-            </ResponsiveContainer>
+        {!isTheoryClass && (
+          <div className="card p-5 sm:p-8">
+            <h3 className="text-xs sm:text-sm font-black text-gray-900 uppercase tracking-widest mb-6 sm:mb-8 flex items-center gap-2">
+              <TrendingUp size={18} className="text-primary-600" /> {t('student_history.performance_history')}
+            </h3>
+            <div className="h-[250px] sm:h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart>
+                  <defs>
+                    <linearGradient id="colorHifz" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorMuraja" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis 
+                    dataKey="date" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{fill: '#9ca3af', fontSize: 10, fontWeight: 700}}
+                  />
+                  <YAxis 
+                    domain={[0, 10]} 
+                    axisLine={false} 
+                    tickLine={false}
+                    tick={{fill: '#9ca3af', fontSize: 10, fontWeight: 700}}
+                  />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', textAlign: 'start' }}
+                  />
+                  <Area data={hifzChart} type="monotone" dataKey="rating" stroke="#f59e0b" strokeWidth={3} fill="url(#colorHifz)" name={t('common.hifz')} />
+                  <Area data={murajaChart} type="monotone" dataKey="rating" stroke="#3b82f6" strokeWidth={3} fill="url(#colorMuraja)" name={t('common.muraja')} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="card p-5 sm:p-8">
-          <h3 className={`text-xs sm:text-sm font-black text-gray-900 uppercase tracking-widest mb-6 sm:mb-8 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <h3 className="text-xs sm:text-sm font-black text-gray-900 uppercase tracking-widest mb-6 sm:mb-8 flex items-center gap-2">
             <Calendar size={18} className="text-primary-600" /> {t('student_history.attendance_presence')}
           </h3>
           <div className="h-[250px] sm:h-[300px] w-full">
@@ -426,17 +479,18 @@ const StudentProgress = () => {
       </div>
 
       {/* Activity Log Section */}
+      {!isTheoryClass && (
       <div className="card overflow-hidden">
         <div className="p-5 sm:p-8 border-b border-gray-100 bg-white">
-          <div className={`flex flex-col xl:flex-row xl:items-center justify-between gap-6 ${isRTL ? 'xl:flex-row-reverse' : ''}`}>
-            <h3 className={`text-lg sm:text-xl font-black text-gray-900 flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+            <h3 className="text-lg sm:text-xl font-black text-gray-900 flex items-center gap-3">
               <History size={24} className="text-primary-600" />
               {t('student_history.activity_log')}
             </h3>
             
-            <div className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto">
               {/* Type Switches */}
-              <div className={`flex items-center gap-1 bg-gray-50 p-1 rounded-xl sm:rounded-2xl border border-gray-100 overflow-x-auto no-scrollbar max-w-full ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl sm:rounded-2xl border border-gray-100 overflow-x-auto no-scrollbar max-w-full">
                 {!isTheoryClass && ['All', 'Hifz', 'Muraja', 'Unprepared'].map(tType => (
                   <button 
                     key={tType}
@@ -452,7 +506,7 @@ const StudentProgress = () => {
               </div>
 
               {/* Time Level Filter */}
-              <div className={`flex items-center gap-1 bg-gray-50 p-1 rounded-xl sm:rounded-2xl border border-gray-100 overflow-x-auto no-scrollbar max-w-full ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl sm:rounded-2xl border border-gray-100 overflow-x-auto no-scrollbar max-w-full">
                 {['AllTime', 'Current', 'Custom'].map(mode => (
                   <button 
                     key={mode}
@@ -464,18 +518,18 @@ const StudentProgress = () => {
                 ))}
 
                 {logTimeMode === 'Custom' && (
-                  <div className={`flex items-center gap-1 border-gray-200 ${isRTL ? 'border-r pr-2 mr-2' : 'border-l pl-2 ml-2'}`}>
+                  <div className="flex items-center gap-1 border-gray-200 border-s ps-2 ms-2">
                     <select 
                       value={logMonthFilter} 
                       onChange={(e) => setLogMonthFilter(e.target.value)}
-                      className={`bg-transparent border-none text-[10px] font-black text-gray-700 focus:ring-0 cursor-pointer p-0 px-1 ${isRTL ? 'text-right' : 'text-left'}`}
+                      className="bg-transparent border-none text-[10px] font-black text-gray-700 focus:ring-0 cursor-pointer p-0 px-1"
                     >
                       {months.map((m, i) => <option key={m} value={i}>{m.slice(0, 3)}</option>)}
                     </select>
                     <select 
                       value={logYearFilter} 
                       onChange={(e) => setLogYearFilter(e.target.value)}
-                      className={`bg-transparent border-none text-[10px] font-black text-gray-700 focus:ring-0 cursor-pointer p-0 px-1 ${isRTL ? 'text-right' : 'text-left'}`}
+                      className="bg-transparent border-none text-[10px] font-black text-gray-700 focus:ring-0 cursor-pointer p-0 px-1"
                     >
                       {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
@@ -491,12 +545,12 @@ const StudentProgress = () => {
           <div className="divide-y divide-gray-50 px-4">
             {filteredLog.map((record) => {
               const att = attendance.find(a => format(new Date(a.date), 'yyyy-MM-dd') === format(new Date(record.date), 'yyyy-MM-dd'));
-              const isNotPrep = record.type.includes('NotPrepared');
+              const isNotPrep = record.type?.includes('NotPrepared');
               
               return (
                 <div key={record.id} className="py-5">
-                  <div className={`flex items-start justify-between mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                    <div className={isRTL ? 'text-right' : 'text-left'}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
                       <div className="text-sm font-black text-gray-900">{format(new Date(record.date), 'MMM dd, yyyy')}</div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase">{format(new Date(record.date), 'EEEE')}</div>
                     </div>
@@ -509,10 +563,10 @@ const StudentProgress = () => {
                     )}
                   </div>
                   
-                  <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className="flex items-center gap-3">
                     {isTheoryClass ? (
-                      <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
-                        <div className="text-xs font-bold text-indigo-600">{enrollment.class.book_title || t('common.unassigned')}</div>
+                      <div className="flex-1">
+                        <div className="text-xs font-bold text-indigo-600">{record.book_title || t('common.unassigned')}</div>
                         <div className="text-[10px] text-gray-500">{record.topic_name}</div>
                         {record.pages_read && <div className="text-[9px] text-gray-400">Pages: {record.pages_read}</div>}
                       </div>
@@ -527,7 +581,7 @@ const StudentProgress = () => {
                         </span>
                         
                         {!isNotPrep && (
-                          <div className={`text-xs font-bold text-gray-700 flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                          <div className="text-xs font-bold text-gray-700 flex-1">
                             {t('student_history.surah_verses', { name: t('reports.surahs.' + record.surah_id), start: record.start_verse, end: record.end_verse })}
                           </div>
                         )}
@@ -556,18 +610,18 @@ const StudentProgress = () => {
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className={`bg-gray-50/50 text-gray-400 text-[10px] font-black uppercase tracking-widest ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <tr className="bg-gray-50/50 text-gray-400 text-[10px] font-black uppercase tracking-widest">
                 <th className="px-8 py-5">{t('student_history.col_date')}</th>
                 <th className="px-8 py-5">{isTheoryClass ? t('progress.theory.book') : t('student_history.col_activity')}</th>
                 <th className="px-8 py-5">{isTheoryClass ? t('progress.theory.topic') : t('student_history.col_recitation')}</th>
                 <th className="px-8 py-5 text-center">{isTheoryClass ? t('progress.theory.pages') : t('student_history.col_rating')}</th>
-                <th className={`px-8 py-5 ${isRTL ? 'text-left' : 'text-right'}`}>{t('student_history.col_attendance')}</th>
+                <th className="px-8 py-5 text-start">{t('student_history.col_attendance')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 bg-white">
               {filteredLog.map((record) => {
                 const att = attendance.find(a => format(new Date(a.date), 'yyyy-MM-dd') === format(new Date(record.date), 'yyyy-MM-dd'));
-                const isNotPrep = record.type.includes('NotPrepared');
+                const isNotPrep = record.type?.includes('NotPrepared');
                 
                 return (
                   <tr key={record.id} className="hover:bg-gray-50/30 transition-all">
@@ -578,7 +632,7 @@ const StudentProgress = () => {
                     <td className="px-8 py-6">
                       {isTheoryClass ? (
                         <span className={`px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600`}>
-                          {enrollment.class.book_title || t('common.unassigned')}
+                          {record.book_title || t('common.unassigned')}
                         </span>
                       ) : (
                         <span className={`px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
@@ -621,11 +675,11 @@ const StudentProgress = () => {
                         ) : <span className="text-gray-300">—</span>
                       )}
                     </td>
-                    <td className={`px-8 py-6 ${isRTL ? 'text-left' : 'text-right'}`}>
+                    <td className="px-8 py-6 text-start">
                       {att ? (
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase ${
                           att.status === 'Present' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        } ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        }`}>
                           <div className={`w-1.5 h-1.5 rounded-full ${att.status === 'Present' ? 'bg-green-600' : 'bg-red-600'}`}></div>
                           {att.status === 'Present' ? t('student_history.present') : t('student_history.absent')}
                         </div>
@@ -638,6 +692,7 @@ const StudentProgress = () => {
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 };

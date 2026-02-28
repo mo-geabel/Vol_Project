@@ -53,12 +53,17 @@ const checkAttendanceSixtyPercentRule = async (enrollmentId, actionDate) => {
 
     const monthYear = `${actionDate.getFullYear()}-${String(actionDate.getMonth() + 1).padStart(2, '0')}`;
 
-    // Get the schedule to find active days passed
+    // Get the schedule to find active days passed. 
+    // We prioritize class-specific schedule, then fallback to global (class_id: null)
     let schedule = await prisma.schedule.findFirst({
       where: {
         month_year: monthYear,
-        class_id: enrollment.class.type === 'Theory' ? enrollment.class_id : null,
-      }
+        OR: [
+          { class_id: enrollment.class_id },
+          { class_id: null }
+        ]
+      },
+      orderBy: { class_id: 'desc' } // Prisma handles null as lowest, so non-null comes first
     });
 
     // Default if schedule is not set
@@ -66,6 +71,7 @@ const checkAttendanceSixtyPercentRule = async (enrollmentId, actionDate) => {
       schedule = { month_year: monthYear, weekend_config: [5, 6], manual_overrides: {} };
     }
 
+    // Counting logic
     const { active_days_passed } = calculateActiveDays(
       schedule.month_year,
       schedule.weekend_config,
@@ -74,8 +80,21 @@ const checkAttendanceSixtyPercentRule = async (enrollmentId, actionDate) => {
 
     if (active_days_passed === 0) return; // Prevent division by zero early in month
 
+    // Grace Period Logic: If student registered in the SAME month as actionDate, skip the rule
+    const registrationDate = new Date(enrollment.createdAt);
+    const isSameMonth = registrationDate.getFullYear() === actionDate.getFullYear() &&
+                        registrationDate.getMonth() === actionDate.getMonth();
+    
+    if (isSameMonth) {
+      console.log(`[Auto-Oversight] Enrollment ID: ${enrollmentId} is in grace period (Registered this month). Skipping rule.`);
+      return;
+    }
+
+    // Fetch dynamic threshold from settings (default to 60)
+    const thresholdSetting = await prisma.systemSetting.findUnique({ where: { key: 'attendanceThreshold' } });
+    const threshold = thresholdSetting ? Number(thresholdSetting.value) : 60;
+
     // Count Absent Days for this month
-    // Meaning we check all Attendances in this month that are explicitly 'Absent'
     const startOfMonth = new Date(actionDate.getFullYear(), actionDate.getMonth(), 1);
     const endOfMonth = new Date(actionDate.getFullYear(), actionDate.getMonth() + 1, 0, 23, 59, 59);
 
@@ -91,15 +110,15 @@ const checkAttendanceSixtyPercentRule = async (enrollmentId, actionDate) => {
     });
 
     // Calculation
-    const percentage = (absentDaysCount / active_days_passed) * 100;
+    const percentage = active_days_passed > 0 ? (absentDaysCount / active_days_passed) * 100 : 0;
 
-    if (percentage > 60) {
+    if (percentage > threshold) {
       // Disable enrollment automatically
       await prisma.enrollment.update({
         where: { id: Number(enrollmentId) },
         data: { status: 'Disabled' }
       });
-      console.log(`[Auto-Oversight] Disabled Enrollment ID: ${enrollmentId} due to > 60% absence.`);
+      console.log(`[Auto-Oversight] Disabled Enrollment ID: ${enrollmentId} due to > ${threshold}% absence (Calculated: ${percentage.toFixed(1)}%).`);
     }
 
   } catch (error) {

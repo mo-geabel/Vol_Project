@@ -27,6 +27,15 @@ const getClassProgressReport = async (req, res) => {
     const classData = await prisma.class.findUnique({
       where: { id: Number(classId) },
       include: {
+        theory_progress: {
+          where: {
+            date: {
+              gte: startDate,
+              lte: endDate
+            }
+          },
+          orderBy: { date: 'asc' }
+        },
         enrollments: {
           include: {
             student: true,
@@ -56,7 +65,13 @@ const getClassProgressReport = async (req, res) => {
       return res.status(404).json({ message: 'Class not found' });
     }
 
+    if (req.user.role === 'teacher' && classData.teacher_id !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized for this class report' });
+    }
+
     // Process report data for each student
+    const isTheory = classData.type === 'Theory';
+    
     const reportData = classData.enrollments.map(enrollment => {
       const { student, quran_progress, attendances } = enrollment;
 
@@ -86,6 +101,22 @@ const getClassProgressReport = async (req, res) => {
       const activeDays = attendances.filter(a => a.status === 'Present').length;
       const absentDays = attendances.filter(a => a.status === 'Absent').length;
 
+      // Theory Progress
+      let theoryData = null;
+      if (isTheory && classData.theory_progress) {
+        // Find theory progress that happened on days the student was present
+        const attendedDates = attendances.filter(a => a.status === 'Present').map(a => new Date(a.date).getTime());
+        const studentTheoryProgress = classData.theory_progress.filter(tp => attendedDates.includes(new Date(tp.date).getTime()));
+        
+        const books = [...new Set(studentTheoryProgress.map(tp => tp.book_title).filter(Boolean))].join(' | ');
+        const topics = [...new Set(studentTheoryProgress.map(tp => tp.topic_name).filter(Boolean))].join(' | ');
+        
+        theoryData = {
+          books: books || null,
+          topics: topics || null
+        }
+      }
+
       return {
         student_id: student.id,
         name: student.name,
@@ -98,6 +129,7 @@ const getClassProgressReport = async (req, res) => {
           start: murajaStart ? { surah_id: murajaStart.surah_id, verse: murajaStart.start_verse, date: murajaStart.date } : null,
           end: murajaEnd ? { surah_id: murajaEnd.surah_id, verse: murajaEnd.end_verse, date: murajaEnd.date } : null
         },
+        theory: theoryData,
         attendance: {
           activeDays,
           absentDays
@@ -127,10 +159,39 @@ const getClassProgressReport = async (req, res) => {
       }
     }));
 
+    let classBooks = null;
+    let classTopics = [];
+    if (isTheory && classData.theory_progress) {
+      classBooks = [...new Set(classData.theory_progress.map(tp => tp.book_title).filter(Boolean))].join(' | ');
+      
+      const topicsMap = new Map();
+      classData.theory_progress.forEach(tp => {
+        if (tp.topic_name) {
+          const dateStr = new Date(tp.date).toISOString().split('T')[0];
+          const key = `${dateStr}-${tp.topic_name}`;
+          if (!topicsMap.has(key)) {
+            topicsMap.set(key, { date: tp.date, topic: tp.topic_name });
+          }
+        }
+      });
+      classTopics = Array.from(topicsMap.values()).sort((a,b) => new Date(a.date) - new Date(b.date));
+    }
+
+    // Calculate active days for the class overall
+    const allAttendanceDates = classData.enrollments.flatMap(e => 
+      e.attendances.map(a => new Date(a.date).toISOString().split('T')[0])
+    );
+    const classActiveDays = new Set(allAttendanceDates).size;
+
     res.json({
       className: classData.class_name,
       period: { startDate, endDate },
-      report: finalReport
+      classActiveDays,
+      report: finalReport,
+      theory_summary: isTheory ? {
+        books: classBooks || null,
+        topics: classTopics
+      } : null
     });
 
   } catch (error) {

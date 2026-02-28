@@ -64,7 +64,8 @@ const TheoryProgress = () => {
         return {
           enrollment_id: e.id,
           student_name: e.student.name,
-          status: record ? record.status : 'Present'
+          status: record ? record.status : 'Absent',
+          enrollmentStatus: e.status
         };
       });
       setAttendance(initialAttendance);
@@ -225,30 +226,42 @@ const TheoryProgress = () => {
             </div>
             
             <div className="divide-y divide-gray-50 max-h-[600px] overflow-y-auto">
-              {attendance.map((student, index) => (
-                <div key={student.enrollment_id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold">
-                      {student.student_name.charAt(0)}
+              {attendance.map((student, index) => {
+                const isDisabled = student.enrollmentStatus === 'Disabled';
+                return (
+                  <div key={student.enrollment_id} className={`p-4 flex items-center justify-between transition-colors ${isDisabled ? 'bg-gray-50 opacity-75' : 'hover:bg-gray-50'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${isDisabled ? 'bg-gray-200 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
+                        {student.student_name.charAt(0)}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className={`font-medium ${isDisabled ? 'text-gray-400' : 'text-gray-900'}`}>{student.student_name}</span>
+                        {isDisabled && (
+                          <span className="text-[10px] font-black text-red-500 uppercase tracking-tighter">
+                            {t('common.disabled')}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <span className="font-medium text-gray-900">{student.student_name}</span>
+                    
+                    <button 
+                      disabled={isDisabled}
+                      onClick={() => toggleAttendance(index)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                        isDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none border-none' :
+                        student.status === 'Present' ? 'bg-green-100 text-green-700 shadow-sm shadow-green-100' :
+                        student.status === 'Absent' ? 'bg-red-100 text-red-700 shadow-sm shadow-red-100' :
+                        'bg-amber-100 text-amber-700 shadow-sm shadow-amber-100'
+                      }`}
+                    >
+                      {student.status === 'Present' ? <CheckCircle2 size={14} /> : 
+                       student.status === 'Absent' ? <XCircle size={14} /> : 
+                       <Clock size={14} />}
+                      {t(`attendance.${student.status.toLowerCase()}`)}
+                    </button>
                   </div>
-                  
-                  <button 
-                    onClick={() => toggleAttendance(index)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                      student.status === 'Present' ? 'bg-green-100 text-green-700 shadow-sm shadow-green-100' :
-                      student.status === 'Absent' ? 'bg-red-100 text-red-700 shadow-sm shadow-red-100' :
-                      'bg-amber-100 text-amber-700 shadow-sm shadow-amber-100'
-                    }`}
-                  >
-                    {student.status === 'Present' ? <CheckCircle2 size={14} /> : 
-                     student.status === 'Absent' ? <XCircle size={14} /> : 
-                     <Clock size={14} />}
-                    {t(`attendance.${student.status.toLowerCase()}`)}
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

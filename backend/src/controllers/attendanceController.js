@@ -88,9 +88,21 @@ const markAttendance = async (req, res) => {
     }
 
     const results = [];
+    
+    // Get statuses of all enrollments in the list
+    const enrollmentIds = [...new Set(attendanceList.map(a => Number(a.enrollment_id)))];
+    const enrollments = await prisma.enrollment.findMany({
+      where: { id: { in: enrollmentIds } },
+      select: { id: true, status: true }
+    });
 
     for (const record of attendanceList) {
       if (!record.enrollment_id || !record.status) continue;
+      
+      const enrollment = enrollments.find(e => e.id === Number(record.enrollment_id));
+      if (!enrollment || enrollment.status !== 'Active') {
+        continue; // Skip disabled or missing enrollments
+      }
 
       // Upsert record: if exists for day, update status, else create
       const upserted = await prisma.attendance.upsert({

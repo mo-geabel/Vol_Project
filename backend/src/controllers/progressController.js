@@ -62,6 +62,10 @@ const logQuranProgress = async (req, res) => {
        return res.status(403).json({ message: 'Not authorized for this enrollment' });
     }
 
+    if (enrollment.status !== 'Active') {
+      return res.status(400).json({ message: 'Cannot log progress for a disabled enrollment' });
+    }
+
     // Check for existing record of the same category (Hifz or Muraja)
     const hifzTypes = ['Hifz', 'NotPreparedHifz'];
     const murajaTypes = ['Muraja', 'NotPreparedMuraja'];
@@ -205,6 +209,10 @@ const logNotPrepared = async (req, res) => {
        return res.status(403).json({ message: 'Not authorized for this enrollment' });
     }
 
+    if (enrollment.status !== 'Active') {
+       return res.status(400).json({ message: 'Cannot log progress for a disabled enrollment' });
+    }
+
     // Check for existing record of the same category
     const hifzTypes = ['Hifz', 'NotPreparedHifz'];
     const murajaTypes = ['Muraja', 'NotPreparedMuraja'];
@@ -261,7 +269,25 @@ const getProgressForEnrollment = async (req, res) => {
   try {
     const { id } = req.params; // enrollment ID
 
-    const [quran, attendance, enrollment] = await Promise.all([
+    const targetEnrollment = await prisma.enrollment.findUnique({
+      where: { id: Number(id) },
+      include: {
+        student: {
+          include: {
+            enrollments: {
+              include: { class: { select: { id: true, class_name: true, type: true } } }
+            }
+          }
+        },
+        class: true
+      }
+    });
+
+    if (!targetEnrollment) {
+      return res.status(404).json({ message: 'Enrollment not found' });
+    }
+
+    const [quran, attendance] = await Promise.all([
       prisma.quranProgress.findMany({
         where: { enrollment_id: Number(id) },
         orderBy: { date: 'desc' }
@@ -269,29 +295,24 @@ const getProgressForEnrollment = async (req, res) => {
       prisma.attendance.findMany({
         where: { enrollment_id: Number(id) },
         orderBy: { date: 'desc' }
-      }),
-      prisma.enrollment.findUnique({
-        where: { id: Number(id) },
-        include: {
-          student: true,
-          class: true
-        }
       })
     ]);
 
-    if (!enrollment) {
-      return res.status(404).json({ message: 'Enrollment not found' });
-    }
-
     let theory = [];
-    if (enrollment.class.type === 'Theory') {
+    if (targetEnrollment.class.type === 'Theory') {
       theory = await prisma.theoryProgress.findMany({
-        where: { class_id: enrollment.class_id },
+        where: { class_id: targetEnrollment.class_id },
         orderBy: { date: 'desc' }
       });
     }
 
-    res.json({ enrollment, quran, theory, attendance });
+    res.json({ 
+      enrollment: targetEnrollment, 
+      quran, 
+      theory, 
+      attendance,
+      allEnrollments: targetEnrollment.student.enrollments 
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

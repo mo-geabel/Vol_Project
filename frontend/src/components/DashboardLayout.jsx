@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { 
   Menu, X, LogOut, Home, Users, BookOpen, 
   CalendarDays, Settings, GraduationCap, ClipboardList,
-  ChevronDown, ChevronRight, FileText, Languages, TrendingUp
+  ChevronDown, ChevronRight, FileText, Languages, TrendingUp,ShieldCheck
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -41,6 +42,7 @@ const DashboardLayout = () => {
       children: [
         { name: t('common.quranic'), href: '/admin/students/quranic', icon: BookOpen },
         { name: t('common.theoric'), href: '/admin/students/theoric', icon: GraduationCap },
+        { name: t('compliance.compliance'), href: '/admin/students/compliance', icon: ShieldCheck },
       ]
     },
     { name: t('common.classes'), href: '/admin/classes', icon: BookOpen },
@@ -55,6 +57,7 @@ const DashboardLayout = () => {
     { name: t('common.dashboard'), href: '/teacher', icon: Home },
     { name: t('common.my_classes'), href: '/teacher/classes', icon: BookOpen },
     { name: t('common.attendance'), href: '/teacher/attendance', icon: CalendarDays },
+    { name: t('common.reports'), href: '/teacher/reports', icon: FileText },
     { name: t('common.statistics'), href: '/teacher/statistics', icon: TrendingUp },
   ];
 
@@ -220,7 +223,7 @@ const DashboardLayout = () => {
             </div>
             <div className="hidden lg:block h-6 w-px bg-gray-200" />
             <h2 className="hidden lg:block text-sm font-medium text-gray-500 truncate max-w-[200px]">
-              {navigation.find(n => window.location.pathname.startsWith(n.href))?.name || 'Overview'}
+              {navigation.find(n => window.location.pathname.startsWith(n.href))?.name || t('common.overview')}
             </h2>
           </div>
 
@@ -228,10 +231,10 @@ const DashboardLayout = () => {
             <button
               onClick={toggleLanguage}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
-              title={i18n.language === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
+              title={t(`common.languages.switch_to_${i18n.language === 'en' ? 'ar' : 'en'}`)}
             >
               <Languages size={18} />
-              <span>{i18n.language === 'en' ? 'Arabic' : 'English'}</span>
+              <span>{t(`common.languages.${i18n.language === 'en' ? 'ar' : 'en'}`)}</span>
             </button>
           </div>
         </header>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
-import { Plus, Trash2, GraduationCap, Edit2, Users, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, GraduationCap, Edit2, Users as UsersIcon, TrendingUp, UserPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const TheoricStudents = () => {
@@ -11,6 +11,7 @@ const TheoricStudents = () => {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Modals
@@ -23,16 +24,21 @@ const TheoricStudents = () => {
     date_of_birth: '',
     class_id: '' // For enrollment/reassignment
   });
+  
+  const [showStaffModal, setShowStaffModal] = useState(false);
+  const [staffFormData, setStaffFormData] = useState({ user_id: '', class_id: '' });
 
   const fetchData = async () => {
     try {
-      const [studentRes, classRes] = await Promise.all([
+      const [studentRes, classRes, userRes] = await Promise.all([
         api.get('/students'),
-        api.get('/classes')
+        api.get('/classes'),
+        api.get('/users')
       ]);
       setStudents(studentRes.data);
       // Filter only Theory classes
       setClasses(classRes.data.filter(c => c.type === 'Theory'));
+      setUsers(userRes.data);
     } catch (error) {
       toast.error(t('students.load_error'));
     } finally {
@@ -113,6 +119,19 @@ const TheoricStudents = () => {
     }
   };
 
+  const handleSaveStaff = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/students/staff-enroll', staffFormData);
+      toast.success(t('students.staff_enroll_success') || 'Staff enrolled successfully');
+      setShowStaffModal(false);
+      setStaffFormData({ user_id: '', class_id: '' });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.message || t('classes.action_failed'));
+    }
+  };
+
   if (loading) return <div className="p-8">{t('students.loading_theoric')}</div>;
 
   // Grouping logic
@@ -129,24 +148,36 @@ const TheoricStudents = () => {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">{t('students.theoric_title')}</h1>
-        <button 
-          onClick={() => {
-            setEditingStudent(null);
-            setFormData({ name: '', contact_info: '', parent_info: '', date_of_birth: '', class_id: '' });
-            setShowModal(true);
-          }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={18} className="me-1" />
-          {t('students.add_student')}
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button 
+            onClick={() => {
+              setStaffFormData({ user_id: '', class_id: '' });
+              setShowStaffModal(true);
+            }}
+            className="btn-secondary flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+          >
+            <UserPlus size={18} className="me-1" />
+            {t('students.add_staff') || 'Add Staff'}
+          </button>
+          <button 
+            onClick={() => {
+              setEditingStudent(null);
+              setFormData({ name: '', contact_info: '', parent_info: '', date_of_birth: '', class_id: '' });
+              setShowModal(true);
+            }}
+            className="btn-primary flex items-center justify-center gap-2"
+          >
+            <Plus size={18} className="me-1" />
+            {t('students.add_student')}
+          </button>
+        </div>
       </div>
 
       <div className="space-y-8">
         {groupedStudents.map((group) => (
           <section key={group.id} className="space-y-4">
             <div className="flex items-center gap-2 border-b border-gray-200 pb-2 text-start">
-              <Users size={20} className="text-secondary-600 me-2" />
+              <UsersIcon size={20} className="text-secondary-600 me-2" />
               <h2 className="text-lg font-bold text-gray-800">{group.class_name}</h2>
               <span className="text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">
                 {group.students.length} {t('common.students')}
@@ -239,6 +270,60 @@ const TheoricStudents = () => {
                       {editingStudent ? t('common.save') : t('students.save_student')}
                     </button>
                     <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 font-medium">
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Staff Modal */}
+      {showStaffModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-900/20 transition-opacity" onClick={() => setShowStaffModal(false)}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div 
+              className="relative z-10 inline-block align-bottom bg-white rounded-2xl text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <UserPlus size={24} />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 text-start">
+                    {t('students.add_staff') || 'Add Staff to Theory'}
+                  </h3>
+                </div>
+                <form onSubmit={handleSaveStaff} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 text-start">{t('common.users') || 'Select Staff'}</label>
+                    <select required className="mt-1 input-field text-start" value={staffFormData.user_id} onChange={(e) => setStaffFormData({...staffFormData, user_id: e.target.value})}>
+                      <option value="">{t('common.select') || 'Select...'}</option>
+                      {users.map(u => (
+                        <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 text-start">{t('students.assign_theoric')}</label>
+                    <select required className="mt-1 input-field text-start" value={staffFormData.class_id} onChange={(e) => setStaffFormData({...staffFormData, class_id: e.target.value})}>
+                      <option value="">{t('common.select') || 'Select...'}</option>
+                      {classes.map(c => (
+                        <option key={c.id} value={c.id}>{c.class_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="mt-8 flex gap-3 border-t border-gray-100 pt-5 flex-row-reverse">
+                    <button type="submit" className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium transition-colors">
+                      {t('common.add') || 'Add Staff'}
+                    </button>
+                    <button type="button" onClick={() => setShowStaffModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 font-medium">
                       {t('common.cancel')}
                     </button>
                   </div>

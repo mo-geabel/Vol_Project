@@ -28,8 +28,11 @@ app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/teacher-attendance', require('./routes/teacherAttendanceRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
 
-const PORT = process.env.PORT || 5000;
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+module.exports = app;

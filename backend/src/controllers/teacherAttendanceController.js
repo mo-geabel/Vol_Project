@@ -9,7 +9,10 @@ const getTeachersAttendance = async (req, res) => {
     const { date } = req.params;
 
     const teachers = await prisma.user.findMany({
-      where: { role: 'teacher' },
+      where: { 
+        role: 'teacher',
+        status: 'Active'
+      },
       select: { id: true, name: true }
     });
 
@@ -82,7 +85,28 @@ const markTeachersAttendance = async (req, res) => {
   }
 };
 
+// @desc    Get attendance history for a specific teacher
+// @route   GET /api/teacher-attendance/history/:id
+// @access  Private (Admin)
+const getTeacherAttendanceHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const records = await prisma.teacherAttendance.findMany({
+      where: { teacher_id: Number(id) },
+      orderBy: { date: 'desc' },
+      take: 100 // limit to last 100 records for performance
+    });
+    
+    res.json(records);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getTeachersAttendance,
   markTeachersAttendance,
+  getTeacherAttendanceHistory,
 };

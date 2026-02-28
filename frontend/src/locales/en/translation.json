@@ -1,8 +1,18 @@
 {
   "common": {
+    "all": "All",
     "dashboard": "Dashboard",
     "users": "Users",
     "students": "Students",
+    "disabled": "Disabled",
+    "deactivated": "Deactivated",
+    "active": "Active",
+    "present": "Present",
+    "absent": "Absent",
+    "search": "Search",
+    "no_results": "No results",
+    "loading": "Loading",
+    "load_error": "Failed to load data",
     "quranic": "Quranic",
     "theoric": "Theoric",
     "classes": "Classes",
@@ -15,6 +25,7 @@
     "sign_out": "Sign Out",
     "portal_name": "MEMS Portal",
     "overview": "Overview",
+    "compliance": "Compliance",
     "teacher_attendance": "Teacher Attendance",
     "total_users": "Total Users",
     "total_classes": "Total Classes",
@@ -52,7 +63,22 @@
     "hifz": "Hifz",
     "muraja": "Muraja",
     "unauthorized": "Unauthorized Access",
-    "theory_coming_soon": "Theory Progress (Coming Soon)"
+    "theory_coming_soon": "Theory Progress (Coming Soon)",
+    "week_days": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "languages": {
+      "en": "English",
+      "ar": "Arabic",
+      "switch_to_en": "Switch to English",
+      "switch_to_ar": "Switch to Arabic"
+    }
   },
   "progress": {
     "title": "Quranic Progress",
@@ -127,16 +153,16 @@
     "filter_hifz": "Hifz",
     "filter_muraja": "Muraja",
     "filter_unprepared": "Unprepared",
-    "time_all": "All Time",
+    "time_alltime": "All Time",
     "time_current": "Current",
     "time_custom": "Custom",
     "no_records": "No records found.",
     "col_date": "Date",
     "col_activity": "Activity",
     "col_recitation": "Recitation",
+    "parent_details": "Parent Details",
     "col_rating": "Rating",
     "col_attendance": "Attendance",
-    "no_progress": "No progress",
     "no_record": "No Record",
     "present": "Present",
     "absent": "Absent",
@@ -175,11 +201,13 @@
     "status": "Status",
     "official": "Official",
     "summary_activities": "Period Summary & Activities",
+    "student_name": "Student Name",
     "Student_Name": "Student Name",
     "hifz_progress": "Hifz Progress",
     "muraja_progress": "Muraja Progress",
     "pres.": "Pres.",
     "abs.": "Abs.",
+    "age": "Age",
     "Age": "Age",
     "Hifz_Start": "HIFZ START",
     "Hifz_End": "HIFZ END",
@@ -219,7 +247,8 @@
     "select_class_error": "Please select a class",
     "generate_success": "Report aggregated successfully",
     "generate_error": "Failed to generate report",
-    "pdf_filename": "{{className}}_Academic_Report_{{period}}.pdf"
+    "pdf_filename": "{{className}}_Academic_Report_{{period}}.pdf",
+    "active_days": "Active Days"
   },
   "attendance": {
     "title": "Mark Attendance",
@@ -241,7 +270,8 @@
     "load_error": "Failed to load attendance info",
     "save_success": "Attendance successfully saved",
     "save_error": "Failed to save attendance",
-    "load_classes_error": "Failed to load classes"
+    "load_classes_error": "Failed to load classes",
+    "required_for_progress": "Must be marked Present in Attendance to log progress."
   },
   "classes": {
     "title": "Class Management",
@@ -322,6 +352,8 @@
     "admin_role": "Admin (Full Control)",
     "delete_title": "Delete User?",
     "delete_confirm": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone and will remove all their access.",
+    "deactivate_confirm": "Are you sure you want to deactivate {{name}}? Their history and assigned classes will be preserved, but they will no longer be able to log in.",
+    "show_deactivated": "Show Deactivated",
     "yes_delete": "Yes, Delete User",
     "deleting": "Deleting...",
     "no_users": "No users found.",
@@ -342,10 +374,12 @@
     "assigned_classes": "Assigned Classes",
     "no_classes": "No classes assigned to you yet.",
     "students_count": "{{count}} Students",
+    "disabled_students_count": "{{count}} Disabled",
     "load_error": "Failed to load dashboard data",
-    "attendance_trend": "Attendance Trend (Last 7 Days)",
+    "attendance_trend": "Attendance Trend (Last 7 Active Days)",
     "best_attendance": "Best Attendance",
     "best_performance": "Best Performance",
+    "best_rated": "Best Rated",
     "best_teacher_attendance": "Best Teacher Attendance",
     "no_teacher_attendance": "No teacher attendance data yet",
     "logs_recorded": "Logs Recorded"
@@ -425,5 +459,26 @@
     "excused": "Excused",
     "notes": "Notes",
     "loading": "Loading teachers list..."
+  },
+  "compliance": {
+    "title": "Attendance Compliance",
+    "subtitle": "Monitor student attendance and manage automatic enrollment status based on the threshold rule.",
+    "student": "Student",
+    "class": "Class",
+    "absences": "Absences",
+    "active_days": "Active Days",
+    "percentage": "Absence %",
+    "status": "Status",
+    "actions": "Actions",
+    "grace_period": "Grace Period",
+    "rule_applied": "Rule Active",
+    "threshold_warning": "Above Threshold",
+    "threshold_ok": "Good Standing",
+    "reactivate": "Reactivate",
+    "reactivate_success": "Student enrollment reactivated successfully",
+    "reactivate_error": "Failed to reactivate enrollment",
+    "no_data": "No attendance data for this month",
+    "rule_applied_nextMonth": "Active from next month",
+    "action_required": "Disciplinary action pending"
   }
 }

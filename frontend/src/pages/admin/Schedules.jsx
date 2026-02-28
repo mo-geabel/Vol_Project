@@ -174,9 +174,15 @@ const Schedules = () => {
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
 
-  const weekDays = isRTL 
-    ? ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
-    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekDays = [
+    t('common.week_days.sun'),
+    t('common.week_days.mon'),
+    t('common.week_days.tue'),
+    t('common.week_days.wed'),
+    t('common.week_days.thu'),
+    t('common.week_days.fri'),
+    t('common.week_days.sat')
+  ];
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

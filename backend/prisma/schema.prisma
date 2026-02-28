@@ -13,6 +13,7 @@ model User {
   username      String  @unique
   password_hash String
   role              Role                @default(teacher)
+  status            MemberStatus        @default(Active)
   classes           Class[]
   teacher_attendances TeacherAttendance[] @relation("UserToTeacherAttendance")
 
@@ -25,6 +26,7 @@ model Student {
   contact_info  String?
   parent_info   String?
   date_of_birth DateTime?
+  status        MemberStatus @default(Active)
   enrollments   Enrollment[]
 
   @@map("students")
@@ -35,6 +37,7 @@ model Class {
   class_name        String
   type              ClassType
   teacher_id        Int?
+  book_title        String?
   schedule_settings Json?
   teacher           User?        @relation(fields: [teacher_id], references: [id])
   enrollments       Enrollment[]
@@ -60,6 +63,7 @@ model Enrollment {
   student_id      Int
   class_id        Int
   status          EnrollmentStatus @default(Active)
+  createdAt       DateTime         @default(now())
   attendances     Attendance[]
   class           Class            @relation(fields: [class_id], references: [id])
   student         Student          @relation(fields: [student_id], references: [id])
@@ -161,4 +165,9 @@ enum ProgressType {
   Muraja
   NotPreparedHifz
   NotPreparedMuraja
+}
+
+enum MemberStatus {
+  Active
+  Disabled
 }

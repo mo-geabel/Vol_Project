@@ -89,9 +89,9 @@ const Attendance = () => {
         console.error('Schedule check failed', err);
       }
 
-      // 1. Get enrollments for this class
+      // 1. Get enrollments for this class (including disabled)
       const enrollmentsRes = await api.get('/enrollments');
-      const classEnrollments = enrollmentsRes.data.filter(e => e.class_id === Number(selectedClass) && e.status === 'Active');
+      const classEnrollments = enrollmentsRes.data.filter(e => e.class_id === Number(selectedClass));
       
       // 2. Get existing attendance for this class/date
       const attendanceRes = await api.get(`/attendance/${selectedClass}/${date}`);
@@ -103,7 +103,8 @@ const Attendance = () => {
         return {
           enrollment_id: enrollment.id,
           student_name: enrollment.student.name,
-          status: existingRec ? existingRec.status : 'Present' 
+          status: existingRec ? existingRec.status : 'Absent',
+          enrollmentStatus: enrollment.status // Keep track of active/disabled
         };
       });
       
@@ -197,16 +198,25 @@ const Attendance = () => {
           </div>
           <ul className="divide-y divide-gray-200">
             {studentsConfig.map((student, index) => (
-              <li key={student.enrollment_id} className="px-4 py-4 sm:px-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                <div className="text-sm font-medium text-gray-900">{student.student_name}</div>
+              <li key={student.enrollment_id} className={`px-4 py-4 sm:px-6 flex items-center justify-between transition-colors ${student.enrollmentStatus === 'Disabled' ? 'bg-gray-50 opacity-75' : 'hover:bg-gray-50'}`}>
+                <div className="flex items-center gap-3">
+                  <div className="text-sm font-medium text-gray-900">{student.student_name}</div>
+                  {student.enrollmentStatus === 'Disabled' && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-50 text-red-600 border border-red-100 uppercase">
+                      {t('common.disabled')}
+                    </span>
+                  )}
+                </div>
                 <div className="w-40 sm:w-32">
                   <select
                     value={student.status}
+                    disabled={student.enrollmentStatus === 'Disabled'}
                     onChange={(e) => updateAttendanceStatus(index, e.target.value)}
-                    className={`block w-full py-2 px-3 border border-transparent text-sm font-medium rounded-full shadow-sm text-white focus:outline-none transition-colors appearance-none text-center cursor-pointer
-                      ${student.status === 'Present' ? 'bg-green-600 hover:bg-green-700' : 
-                        student.status === 'Absent' ? 'bg-red-600 hover:bg-red-700' : 
-                        'bg-orange-500 hover:bg-orange-600'}`}
+                    className={`block w-full py-2 px-3 border border-transparent text-sm font-medium rounded-full shadow-sm text-white focus:outline-none transition-colors appearance-none text-center
+                      ${student.enrollmentStatus === 'Disabled' ? 'bg-gray-400 cursor-not-allowed' : 
+                        student.status === 'Present' ? 'bg-green-600 hover:bg-green-700 cursor-pointer' : 
+                        student.status === 'Absent' ? 'bg-red-600 hover:bg-red-700 cursor-pointer' : 
+                        'bg-orange-500 hover:bg-orange-600 cursor-pointer'}`}
                   >
                     <option value="Present" className="bg-white text-gray-900">{t('attendance.present')}</option>
                     <option value="Absent" className="bg-white text-gray-900">{t('attendance.absent')}</option>

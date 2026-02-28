@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
-import { Save, Calendar, Check, X, AlertCircle } from 'lucide-react';
+import { Save, Calendar, Check, X, AlertCircle, History } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 
@@ -12,6 +12,10 @@ const TeacherAttendance = () => {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [historyRecords, setHistoryRecords] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const fetchAttendance = async () => {
     setLoading(true);
@@ -54,6 +58,20 @@ const TeacherAttendance = () => {
       toast.error(t('teacher_attendance.save_error'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleViewHistory = async (teacher) => {
+    setSelectedTeacher(teacher);
+    setShowHistoryModal(true);
+    setLoadingHistory(true);
+    try {
+      const response = await api.get(`/teacher-attendance/history/${teacher.id}`);
+      setHistoryRecords(response.data);
+    } catch (error) {
+      toast.error(t('common.load_error') || 'Failed to load history');
+    } finally {
+      setLoadingHistory(false);
     }
   };
 
@@ -108,7 +126,16 @@ const TeacherAttendance = () => {
                 teachers.map((teacher) => (
                   <tr key={teacher.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900">{teacher.name}</div>
+                      <div className="flex items-center justify-between">
+                        <div className="font-bold text-gray-900">{teacher.name}</div>
+                        <button
+                          onClick={() => handleViewHistory(teacher)}
+                          className={`p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors ms-2`}
+                          title={t('common.history') || 'View History'}
+                        >
+                          <History size={16} />
+                        </button>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
@@ -178,6 +205,61 @@ const TeacherAttendance = () => {
           {t('common.save')}
         </button>
       </div>
+
+      {showHistoryModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-900/20 transition-opacity" onClick={() => setShowHistoryModal(false)}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div 
+              className="relative z-10 inline-block align-bottom bg-white rounded-2xl text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 text-start">
+                <div className="flex justify-between items-center mb-5">
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {selectedTeacher?.name} - {t('common.history') || 'Attendance History'}
+                  </h3>
+                  <button onClick={() => setShowHistoryModal(false)} className="text-gray-400 hover:text-gray-600">
+                     <X size={20} />
+                  </button>
+                </div>
+                
+                <div className="max-h-96 overflow-y-auto pr-2">
+                  {loadingHistory ? (
+                    <div className="text-center py-8 text-gray-400">Loading...</div>
+                  ) : historyRecords.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400 italic">No attendance records found.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {historyRecords.map(record => (
+                        <div key={record.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50">
+                          <div className="flex items-center gap-3">
+                             <div className={`p-2 rounded-lg ${record.status === 'Present' ? 'bg-green-100/50 text-green-700' : record.status === 'Absent' ? 'bg-red-100/50 text-red-700' : 'bg-amber-100/50 text-amber-700'}`}>
+                               {record.status === 'Present' ? <Check size={16} /> : record.status === 'Absent' ? <X size={16} /> : <AlertCircle size={16} />}
+                             </div>
+                             <div>
+                                <p className="font-bold text-sm text-gray-900">{format(new Date(record.date), 'dd MMM yyyy')}</p>
+                                <p className={`text-xs font-semibold ${record.status === 'Present' ? 'text-green-600' : record.status === 'Absent' ? 'text-red-500' : 'text-amber-500'}`}>
+                                  {t(`teacher_attendance.${record.status.toLowerCase()}`)}
+                                </p>
+                             </div>
+                          </div>
+                          {record.notes && (
+                            <p className="text-xs text-gray-500 mt-2 sm:mt-0 sm:max-w-[50%] truncate bg-white px-2 py-1 rounded-md border border-gray-100">
+                              {record.notes}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

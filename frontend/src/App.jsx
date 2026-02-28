@@ -15,6 +15,7 @@ import Settings from './pages/admin/Settings';
 import Reports from './pages/admin/Reports';
 import TeacherAttendance from './pages/admin/TeacherAttendance';
 import AdminStatistics from './pages/admin/Statistics';
+import Compliance from './pages/admin/Compliance';
 import TeacherDashboard from './pages/TeacherDashboard';
 import TeacherClasses from './pages/teacher/TeacherClasses';
 import Attendance from './pages/teacher/Attendance';
@@ -47,6 +48,7 @@ function App() {
             <Route path="/admin/classes" element={<Classes />} />
             <Route path="/admin/students/quranic" element={<QuranicStudents />} />
             <Route path="/admin/students/theoric" element={<TheoricStudents />} />
+            <Route path="/admin/students/compliance" element={<Compliance />} />
             <Route path="/admin/schedules" element={<Schedules />} />
             <Route path="/admin/settings" element={<Settings />} />
             <Route path="/admin/teacher-attendance" element={<TeacherAttendance />} />
@@ -64,6 +66,7 @@ function App() {
             <Route path="/teacher/progress/:enrollmentId" element={<StudentProgress />} />
             <Route path="/teacher/theory/:classId" element={<TheoryProgress />} />
             <Route path="/teacher/statistics" element={<TeacherStatistics />} />
+            <Route path="/teacher/reports" element={<Reports />} />
           </Route>
         </Route>
 

@@ -14,7 +14,8 @@ import {
   GraduationCap,
   Edit2,
   Phone,
-  User2
+  User2,
+  XCircle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
@@ -193,9 +194,8 @@ const QuranProgress = () => {
   };
 
   const filteredStudents = enrollments.filter(e => {
-    const isAbsent = attendance.some(a => a.enrollment_id === e.id && a.status === 'Absent');
     const matchesSearch = e.student.name.toLowerCase().includes(searchTerm.toLowerCase());
-    return !isAbsent && matchesSearch;
+    return matchesSearch; // Include both Active and Disabled
   });
 
   if (loading) return <div className="p-8">{t('common.loading')}</div>;
@@ -260,31 +260,37 @@ const QuranProgress = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredStudents.map((enrollment) => {
           const status = getStudentStatus(enrollment.id);
+          const isDisabled = enrollment.status === 'Disabled';
+          const isMarkedPresent = attendance.some(a => a.enrollment_id === enrollment.id && a.status === 'Present');
+          const canLog = !isDisabled && isMarkedPresent;
+          
           return (
-            <div key={enrollment.id} className="card overflow-hidden hover:shadow-lg transition-shadow bg-white flex flex-col group relative">
+            <div key={enrollment.id} className={`card overflow-hidden transition-all bg-white flex flex-col group relative ${isDisabled ? 'grayscale-[0.5] opacity-80 border-red-100' : 'hover:shadow-lg'}`}>
               <div className="p-5 border-b border-gray-100">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h3 className="font-bold text-gray-900 leading-tight">{enrollment.student.name}</h3>
+                    <h3 className={`font-bold leading-tight ${isDisabled ? 'text-gray-500' : 'text-gray-900'}`}>{enrollment.student.name}</h3>
                     <div className="flex items-center gap-2 mt-1">
                       {enrollment.student.date_of_birth && (
                         <span className="text-[10px] bg-indigo-50 text-slate-500 px-1.5 py-0.5 rounded font-black">
                           {t('progress.age', { age: calculateAge(enrollment.student.date_of_birth) })}
                         </span>
                       )}
-                      <div className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 bg-primary-50 text-primary-700 rounded font-bold uppercase">
-                        <CheckCircle2 size={10} />
-                        <span>{t('progress.active')}</span>
+                      <div className={`flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${enrollment.status === 'Active' ? 'bg-primary-50 text-primary-700' : 'bg-red-50 text-red-700'}`}>
+                        {enrollment.status === 'Active' ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
+                        <span>{enrollment.status === 'Active' ? t('common.active') : t('common.disabled')}</span>
                       </div>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => openEditStudentModal(enrollment)}
-                    className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
-                    title={t('progress.edit_student')}
-                  >
-                    <Edit2 size={16} />
-                  </button>
+                  {!isDisabled && (
+                    <button 
+                      onClick={() => openEditStudentModal(enrollment)}
+                      className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
+                      title={t('progress.edit_student')}
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                  )}
                 </div>
                 
                 {/* Status Badges */}
@@ -317,17 +323,24 @@ const QuranProgress = () => {
               </div>
               
               <div className="p-4 flex flex-col gap-3">
+                {!isMarkedPresent && !isDisabled && (
+                  <div className={`text-[10px] font-bold text-amber-600 bg-amber-50 p-2 rounded-lg text-center ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('attendance.required_for_progress') || 'Must be marked Present in Attendance to log progress.'}
+                  </div>
+                )}
                 <div className={`grid grid-cols-2 gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <button 
+                    disabled={!canLog}
                     onClick={() => handleOpenLogModal(enrollment, 'Hifz')}
-                    className={`btn-primary flex items-center justify-center gap-2 py-2 text-sm ${isRTL ? 'flex-row-reverse' : ''}`}
+                    className={`btn-primary flex items-center justify-center gap-2 py-2 text-sm ${isRTL ? 'flex-row-reverse' : ''} ${!canLog ? 'bg-gray-400 cursor-not-allowed border-none shadow-none opacity-50' : ''}`}
                   >
                     <BookOpen size={16} />
                     {t('progress.sign_hifz')}
                   </button>
                   <button 
+                    disabled={!canLog}
                     onClick={() => handleOpenLogModal(enrollment, 'Muraja')}
-                    className={`btn-secondary flex items-center justify-center gap-2 py-2 text-sm ${isRTL ? 'flex-row-reverse' : ''}`}
+                    className={`btn-secondary flex items-center justify-center gap-2 py-2 text-sm ${isRTL ? 'flex-row-reverse' : ''} ${!canLog ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-none opacity-50' : ''}`}
                   >
                     <History size={16} />
                     {t('progress.sign_muraja')}

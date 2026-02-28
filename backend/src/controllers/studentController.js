@@ -10,6 +10,7 @@ const getStudents = async (req, res) => {
     
     if (req.user.role === 'admin') {
       students = await prisma.student.findMany({
+        where: { status: 'Active' },
         include: {
           enrollments: {
             include: {
@@ -22,6 +23,7 @@ const getStudents = async (req, res) => {
       // Teacher only sees students enrolled in their classes
       students = await prisma.student.findMany({
         where: {
+          status: 'Active',
           enrollments: {
             some: {
               class: {
@@ -52,8 +54,11 @@ const getStudents = async (req, res) => {
 // @access  Private
 const getStudentById = async (req, res) => {
   try {
-    const student = await prisma.student.findUnique({
-      where: { id: Number(req.params.id) },
+    const student = await prisma.student.findFirst({
+      where: { 
+        id: Number(req.params.id),
+        status: 'Active'
+      },
       include: {
         enrollments: {
           include: {
@@ -172,11 +177,78 @@ const deleteStudent = async (req, res) => {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    await prisma.student.delete({
+    await prisma.student.update({
       where: { id: Number(req.params.id) },
+      data: { status: 'Disabled' }
+    });
+
+    // Also disable all their enrollments
+    await prisma.enrollment.updateMany({
+      where: { student_id: Number(req.params.id) },
+      data: { status: 'Disabled' }
     });
 
     res.json({ message: 'Student removed' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Enroll Staff as Student
+// @route   POST /api/students/staff-enroll
+// @access  Private/Admin
+const enrollStaffAsStudent = async (req, res) => {
+  try {
+    const { user_id, class_id } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { id: Number(user_id) } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Look for an existing student profile that was created for this staff
+    // using a specifically formatted contact_info: "STAFF_ID:<id>"
+    let student = await prisma.student.findFirst({
+      where: { contact_info: `STAFF_ID:${user.id}` }
+    });
+
+    if (!student) {
+      student = await prisma.student.create({
+        data: {
+          name: `${user.name} (${user.role})`,
+          contact_info: `STAFF_ID:${user.id}`
+        }
+      });
+    }
+
+    // Attempt to enroll
+    const existingEnrollment = await prisma.enrollment.findUnique({
+      where: {
+        student_id_class_id: {
+          student_id: student.id,
+          class_id: Number(class_id)
+        }
+      }
+    });
+
+    if (existingEnrollment) {
+      if (existingEnrollment.status === 'Disabled') {
+        await prisma.enrollment.update({
+          where: { id: existingEnrollment.id },
+          data: { status: 'Active' }
+        });
+        return res.json({ message: 'Staff re-enrolled successfully' });
+      }
+      return res.status(400).json({ message: 'Staff is already enrolled in this class' });
+    }
+
+    await prisma.enrollment.create({
+      data: {
+        student_id: student.id,
+        class_id: Number(class_id)
+      }
+    });
+
+    res.status(201).json({ message: 'Staff enrolled successfully' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -189,4 +261,5 @@ module.exports = {
   createStudent,
   updateStudent,
   deleteStudent,
+  enrollStaffAsStudent,
 };

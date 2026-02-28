@@ -12,6 +12,8 @@ router.route('/')
   .get(protect(), getEnrollments)
   .post(protect(['admin']), createEnrollment); // Only Admin enrolls
 
+router.get('/oversight', protect(['admin']), require('../controllers/enrollmentController').getEnrollmentOversight);
+
 router.route('/:id')
   .put(protect(['admin']), updateEnrollment) // Only Admin updates (status or class)
   .delete(protect(['admin']), deleteEnrollment);

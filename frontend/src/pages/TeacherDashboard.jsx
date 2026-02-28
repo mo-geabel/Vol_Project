@@ -83,12 +83,12 @@ const TeacherDashboard = () => {
 
         <div className="card p-6 bg-white hover:shadow-md transition-all hover:-translate-y-1">
           <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-            <div className="p-3 bg-orange-100 text-orange-600 rounded-xl">
+            <div className="p-3 bg-red-100 text-red-600 rounded-xl">
               <AlertCircle size={24} />
             </div>
             <div>
-              <p className="text-xs font-black text-gray-400 uppercase tracking-widest">{t('dashboard.pending_actions')}</p>
-              <p className="text-3xl font-black text-gray-900">{stats.pendingActions}</p>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-widest">{t('common.disabled')}</p>
+              <p className="text-3xl font-black text-gray-900">{stats.disabledStudents || 0}</p>
             </div>
           </div>
         </div>
@@ -110,9 +110,17 @@ const TeacherDashboard = () => {
                     </span>
                   </div>
                   <h4 className="font-black text-gray-900 text-lg">{cls.name}</h4>
-                  <div className="flex items-center gap-2 mt-3 text-gray-400 font-bold">
-                    <Users size={16} className="text-primary-500" />
-                    <span className="text-xs">{t('dashboard.students_count', { count: cls.studentCount })}</span>
+                  <div className="flex flex-col gap-1 mt-3">
+                    <div className="flex items-center gap-2 text-gray-400 font-bold">
+                      <Users size={16} className="text-primary-500" />
+                      <span className="text-xs">{t('dashboard.students_count', { count: cls.studentCount })}</span>
+                    </div>
+                    {cls.disabledCount > 0 && (
+                      <div className="flex items-center gap-2 text-red-400 font-bold">
+                        <AlertCircle size={14} className="text-red-500" />
+                        <span className="text-[10px] uppercase tracking-tighter">{t('dashboard.disabled_students_count', { count: cls.disabledCount }) || `${cls.disabledCount} Disabled`}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <Link 

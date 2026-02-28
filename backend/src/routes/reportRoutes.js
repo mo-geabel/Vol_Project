@@ -3,6 +3,6 @@ const router = express.Router();
 const { getClassProgressReport } = require('../controllers/reportController');
 const { protect } = require('../middlewares/authMiddleware');
 
-router.get('/progress/:classId', protect(['admin']), getClassProgressReport);
+router.get('/progress/:classId', protect(['admin', 'teacher']), getClassProgressReport);
 
 module.exports = router;

@@ -7,7 +7,11 @@ const prisma = new PrismaClient({});
 // @access  Private/Admin
 const getUsers = async (req, res) => {
   try {
+    const { includeDisabled } = req.query;
+    const where = includeDisabled === 'true' ? {} : { status: 'Active' };
+    
     const users = await prisma.user.findMany({
+      where,
       select: {
         id: true,
         name: true,
@@ -27,8 +31,11 @@ const getUsers = async (req, res) => {
 // @access  Private/Admin
 const getUserById = async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: Number(req.params.id) },
+    const user = await prisma.user.findFirst({
+      where: { 
+        id: Number(req.params.id),
+        status: 'Active'
+      },
       select: {
         id: true,
         name: true,
@@ -105,8 +112,15 @@ const deleteUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    await prisma.user.delete({
+    await prisma.user.update({
       where: { id: Number(req.params.id) },
+      data: { status: 'Disabled' }
+    });
+
+    // Unassign from classes
+    await prisma.class.updateMany({
+      where: { teacher_id: Number(req.params.id) },
+      data: { teacher_id: null }
     });
 
     res.json({ message: 'User removed and unassigned from any classes' });

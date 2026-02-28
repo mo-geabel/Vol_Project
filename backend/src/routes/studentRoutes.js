@@ -6,8 +6,11 @@ const {
   createStudent,
   updateStudent,
   deleteStudent,
+  enrollStaffAsStudent,
 } = require('../controllers/studentController');
 const { protect } = require('../middlewares/authMiddleware');
+
+router.post('/staff-enroll', protect(['admin']), enrollStaffAsStudent);
 
 router.route('/')
   .get(protect(), getStudents)

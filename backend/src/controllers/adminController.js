@@ -7,10 +7,10 @@ const prisma = new PrismaClient({});
 const getAdminStats = async (req, res) => {
   try {
     const [userCount, studentCount, classCount, enrollmentCount] = await Promise.all([
-      prisma.user.count(),
-      prisma.student.count(),
+      prisma.user.count({ where: { status: 'Active' } }),
+      prisma.student.count({ where: { status: 'Active' } }),
       prisma.class.count(),
-      prisma.enrollment.count(),
+      prisma.enrollment.count({ where: { status: 'Active' } }),
     ]);
 
     res.json({
@@ -54,6 +54,7 @@ const getTopStudents = async (req, res) => {
         id: enr?.student_id,
         name: enr?.student?.name,
         class: enr?.class?.class_name,
+        type: enr?.class?.type,
         present_count: stat._count.status
       };
     });
@@ -92,7 +93,38 @@ const getTopStudents = async (req, res) => {
         id: enr?.student_id,
         name: enr?.student?.name,
         class: enr?.class?.class_name,
+        type: enr?.class?.type,
         progress_count: scoreData.pos // Show the absolute positive records to user
+      };
+    });
+
+    // Best Rated Students (Quranic only)
+    const ratedStats = await prisma.quranProgress.groupBy({
+      by: ['enrollment_id'],
+      where: { rating: { not: null } },
+      _avg: { rating: true },
+      _count: { rating: true }
+    });
+
+    // Only consider students with at least 3 ratings to avoid 1-time 10s
+    const validRatings = ratedStats.filter(r => r._count.rating >= 3)
+                                   .sort((a, b) => b._avg.rating - a._avg.rating)
+                                   .slice(0, 3);
+                                   
+    const ratedEnrollmentIds = validRatings.map(r => r.enrollment_id);
+    const ratedEnrollments = await prisma.enrollment.findMany({
+      where: { id: { in: ratedEnrollmentIds } },
+      include: { student: true, class: true }
+    });
+
+    const topRated = validRatings.map(stat => {
+      const enr = ratedEnrollments.find(e => e.id === stat.enrollment_id);
+      return {
+        id: enr?.student_id,
+        name: enr?.student?.name,
+        class: enr?.class?.class_name,
+        type: enr?.class?.type,
+        avg_rating: stat._avg.rating?.toFixed(1) || 0
       };
     });
 
@@ -123,6 +155,7 @@ const getTopStudents = async (req, res) => {
     res.json({ 
       attendance: topAttendance, 
       performance: topPerformance,
+      rated: topRated,
       teachers: topTeachers 
     });
   } catch (error) {
@@ -136,39 +169,73 @@ const getTopStudents = async (req, res) => {
 // @access  Private/Admin
 const getDashboardGraphs = async (req, res) => {
   try {
-    // Example: Attendance over the last 7 days
-    const today = new Date();
-    const lastWeek = new Date(today);
-    lastWeek.setDate(today.getDate() - 6);
-    lastWeek.setHours(0, 0, 0, 0);
+    // 1. Get last 7 active dates for Quranic
+    const quranActiveDates = await prisma.attendance.findMany({
+      where: { enrollment: { class: { type: { not: 'Theory' } } } },
+      distinct: ['date'],
+      orderBy: { date: 'desc' },
+      select: { date: true },
+      take: 7
+    });
 
-    const attendances = await prisma.attendance.groupBy({
+    // 2. Get last 7 active dates for Theory
+    const theoryActiveDates = await prisma.attendance.findMany({
+      where: { enrollment: { class: { type: 'Theory' } } },
+      distinct: ['date'],
+      orderBy: { date: 'desc' },
+      select: { date: true },
+      take: 7
+    });
+
+    const quranDatesList = quranActiveDates.map(a => a.date);
+    const theoryDatesList = theoryActiveDates.map(a => a.date);
+
+    // 3. Fetch attendance for Quranic active dates
+    const quranAttendances = await prisma.attendance.groupBy({
       by: ['date', 'status'],
-      where: { date: { gte: lastWeek } },
-      _count: { status: true },
-      orderBy: { date: 'asc' }
+      where: { 
+        date: { in: quranDatesList },
+        enrollment: { class: { type: { not: 'Theory' } } }
+      },
+      _count: { status: true }
     });
 
-    // Format data for Recharts: [{ date: 'Mon', present: 10, absent: 2 }]
-    const daysMap = {};
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(lastWeek);
-      d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
-      daysMap[dateStr] = { date: dateStr, present: 0, absent: 0, excused: 0 };
-    }
-
-    attendances.forEach(a => {
-      const dateStr = a.date.toISOString().split('T')[0];
-      if (daysMap[dateStr]) {
-        if (a.status === 'Present') daysMap[dateStr].present = a._count.status;
-        if (a.status === 'Absent') daysMap[dateStr].absent = a._count.status;
-        if (a.status === 'Excused') daysMap[dateStr].excused = a._count.status;
-      }
+    // 4. Fetch attendance for Theory active dates
+    const theoryAttendances = await prisma.attendance.groupBy({
+      by: ['date', 'status'],
+      where: { 
+        date: { in: theoryDatesList },
+        enrollment: { class: { type: 'Theory' } }
+      },
+      _count: { status: true }
     });
+
+    // Format helper
+    const formatTrend = (datesList, attendanceData) => {
+      const map = {};
+      [...datesList].sort((a, b) => a - b).forEach(d => {
+        const dateStr = d.toISOString().split('T')[0];
+        map[dateStr] = { date: dateStr, present: 0, absent: 0, excused: 0 };
+      });
+
+      attendanceData.forEach(a => {
+        const dateStr = a.date.toISOString().split('T')[0];
+        if (map[dateStr]) {
+          if (a.status === 'Present') map[dateStr].present = a._count.status;
+          if (a.status === 'Absent') map[dateStr].absent = a._count.status;
+          if (a.status === 'Excused') map[dateStr].excused = a._count.status;
+        }
+      });
+      return Object.values(map);
+    };
+
+    const quranTrend = formatTrend(quranDatesList, quranAttendances);
+    const theoryTrend = formatTrend(theoryDatesList, theoryAttendances);
 
     res.json({
-      attendanceTrend: Object.values(daysMap)
+      quranTrend,
+      theoryTrend,
+      attendanceTrend: quranTrend // Fallback/Legacy support
     });
   } catch (error) {
     console.error('Error fetching graphs:', error);

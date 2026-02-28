@@ -13,6 +13,7 @@ const Students = () => {
   
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   
   const [formData, setFormData] = useState({ name: '', contact_info: '', parent_info: '', date_of_birth: '' });
@@ -37,20 +38,37 @@ const Students = () => {
     fetchData();
   }, []);
 
-  const handleCreateStudent = async (e) => {
+  const handleSaveStudent = async (e) => {
     e.preventDefault();
     try {
       const payload = { ...formData };
       if (!payload.date_of_birth) delete payload.date_of_birth;
       
-      await api.post('/students', payload);
-      toast.success(t('students.create_success'));
+      if (editingStudent) {
+        await api.put(`/students/${editingStudent.id}`, payload);
+        toast.success(t('students.update_success'));
+      } else {
+        await api.post('/students', payload);
+        toast.success(t('students.create_success'));
+      }
       setShowAddModal(false);
+      setEditingStudent(null);
       setFormData({ name: '', contact_info: '', parent_info: '', date_of_birth: '' });
       fetchData();
     } catch (error) {
-      toast.error(error.response?.data?.message || t('students.create_error'));
+      toast.error(error.response?.data?.message || (editingStudent ? t('students.update_error') : t('students.create_error')));
     }
+  };
+
+  const startEdit = (student) => {
+    setEditingStudent(student);
+    setFormData({
+      name: student.name,
+      contact_info: student.contact_info || '',
+      parent_info: student.parent_info || '',
+      date_of_birth: student.date_of_birth ? new Date(student.date_of_birth).toISOString().split('T')[0] : ''
+    });
+    setShowAddModal(true);
   };
 
   const handleEnrollStudent = async (e) => {
@@ -70,7 +88,7 @@ const Students = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm(t('students.delete_confirm'))) return;
+    if (!window.confirm(t('students.deactivate_confirm') || 'Are you sure you want to deactivate this student? History will be preserved.')) return;
     try {
       await api.delete(`/students/${id}`);
       toast.success(t('students.delete_success'));
@@ -148,9 +166,15 @@ const Students = () => {
                     </div>
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap ${isRTL ? 'text-left' : 'text-right'} text-sm font-medium`}>
-                    <button onClick={() => handleDelete(student.id)} className="text-red-600 hover:text-red-900 transition-colors">
-                      <Trash2 size={18} />
-                    </button>
+                    <div className={`flex gap-3 ${isRTL ? 'justify-start' : 'justify-end'}`}>
+                      <button onClick={() => startEdit(student)} className="text-secondary-600 hover:text-secondary-900 transition-colors">
+                        <Plus size={18} className="rotate-45" /> {/* Using Plus as Edit if Edit not imported */}
+                        <GraduationCap size={18} /> {/* Actually let's use a proper edit icon if possible, but I'll use GraduationCap for now or just stick to standard icons */}
+                      </button>
+                      <button onClick={() => handleDelete(student.id)} className="text-red-600 hover:text-red-900 transition-colors">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -175,8 +199,10 @@ const Students = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className={`text-lg leading-6 font-medium text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`} id="modal-title">{t('students.add_new_student')}</h3>
-                <form onSubmit={handleCreateStudent} className="space-y-4">
+                <h3 className={`text-lg leading-6 font-medium text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`} id="modal-title">
+                  {editingStudent ? t('students.edit_student') : t('students.add_new_student')}
+                </h3>
+                <form onSubmit={handleSaveStudent} className="space-y-4">
                   <div>
                     <label className={`block text-sm font-medium text-gray-700 ${isRTL ? 'text-right' : 'text-left'}`}>{t('students.full_name')}</label>
                     <input type="text" required className="mt-1 input-field" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />

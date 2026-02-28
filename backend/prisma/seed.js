@@ -97,16 +97,6 @@ const surahs = [
   { surah_id: 91, surah_name: 'Ash-Shams', verse_count: 15 },
   { surah_id: 92, surah_name: 'Al-Lail', verse_count: 21 },
   { surah_id: 93, surah_name: 'Ad-Duha', verse_count: 11 },
-  { surah_id: 94, surah_name: 'Ash-Sharh', verse_count: 8 },
-  { surah_id: 95, surah_name: 'At-Tin', verse_count: 8 },
-  { surah_id: 96, surah_name: 'Al-Alaq', verse_count: 19 },
-  { surah_id: 97, surah_name: 'Al-Qadr', verse_count: 5 },
-  { surah_id: 98, surah_name: 'Al-Bayyinah', verse_count: 8 },
-  { surah_id: 99, surah_name: 'Az-Zalzalah', verse_count: 8 },
-  { surah_id: 100, surah_name: 'Al-Adiyat', verse_count: 11 },
-  { surah_id: 101, surah_name: 'Al-Qari\'ah', verse_count: 11 },
-  { surah_id: 102, surah_name: 'At-Takathur', verse_count: 8 },
-  { surah_id: 103, surah_name: 'Al-Asr', verse_count: 3 },
   { surah_id: 104, surah_name: 'Al-Humazah', verse_count: 9 },
   { surah_id: 105, surah_name: 'Al-Fil', verse_count: 5 },
   { surah_id: 106, surah_name: 'Quraish', verse_count: 4 },
@@ -120,10 +110,18 @@ const surahs = [
   { surah_id: 114, surah_name: 'An-Nas', verse_count: 6 }
 ];
 
+const arabicNames = [
+  'محمد', 'أحمد', 'علي', 'عثمان', 'عمر', 'يوسف', 'إبراهيم', 'موسى', 'عيسى', 'نوح',
+  'يونس', 'هود', 'صالح', 'شعيب', 'سليمان', 'داود', 'أيوب', 'زكريا', 'يحيى', 'إسماعيل',
+  'إسحاق', 'يعقوب', 'بنيامين', 'زيد', 'أنس', 'عمار', 'ياسر', 'بلال', 'خليل', 'جابر',
+  'سالم', 'سعيد', 'خالد', 'طارق', 'حمزة', 'معاذ', 'سعد', 'فهد', 'نايف', 'ريان',
+  'فيصل', 'سلطان', 'تركي', 'مشعل', 'بندر', 'ماجد', 'وليد', 'هاني', 'باسل', 'سامر'
+];
+
 async function main() {
   console.log('Start seeding...');
 
-  // 0. Clear existing data in reverse order of dependencies
+  // 0. Clear existing data
   console.log('Clearing existing data...');
   await prisma.theoryProgress.deleteMany({});
   await prisma.quranProgress.deleteMany({});
@@ -132,122 +130,187 @@ async function main() {
   await prisma.schedule.deleteMany({});
   await prisma.class.deleteMany({});
   await prisma.student.deleteMany({});
+  await prisma.teacherAttendance.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.quranMetadata.deleteMany({});
+  await prisma.systemSetting.deleteMany({});
 
   // 1. Seed Quran Metadata
   console.log('Seeding Quran metadata...');
   for (const surah of surahs) {
-    await prisma.quranMetadata.create({
-      data: surah,
-    });
+    await prisma.quranMetadata.create({ data: surah });
   }
 
-  // 2. Seed Users (Admin and Teachers)
+  // 2. Seed System Settings
+  console.log('Seeding system settings...');
+  await prisma.systemSetting.create({
+    data: { key: 'attendanceThreshold', value: 60 }
+  });
+
+  // 3. Seed Users
   console.log('Seeding users...');
   const salt = await bcrypt.genSalt(10);
-  const adminPassword = await bcrypt.hash('admin123', salt);
+  const password = await bcrypt.hash('admin123', salt);
   const teacherPassword = await bcrypt.hash('teacher123', salt);
 
   const admin = await prisma.user.create({
-    data: {
-      name: 'Super Admin',
-      username: 'admin',
-      password_hash: adminPassword,
-      role: 'admin',
-    },
+    data: { name: 'المدير العام', username: 'admin', password_hash: password, role: 'admin' }
   });
 
   const teacher1 = await prisma.user.create({
-    data: {
-      name: 'Sheikh Ahmed',
-      username: 'teacher1',
-      password_hash: teacherPassword,
-      role: 'teacher',
-    },
+    data: { name: 'الشيخ أحمد الحافظ', username: 'teacher1', password_hash: teacherPassword, role: 'teacher' }
   });
 
   const teacher2 = await prisma.user.create({
-    data: {
-      name: 'Sheikh Omar',
-      username: 'teacher2',
-      password_hash: teacherPassword,
-      role: 'teacher',
-    },
+    data: { name: 'الأستاذ يوسف النحو', username: 'teacher2', password_hash: teacherPassword, role: 'teacher' }
   });
 
-  // 3. Seed Students
-  console.log('Seeding students...');
-  const studentNames = [
-    'Abdullah Ali', 'Fatimah Hassan', 'Zaid Rahman', 'Maryam Ibrahim',
-    'Omar Khalid', 'Aisha Yusuf', 'Hamza Bakri', 'Khadijah Salim',
-    'Ibrahim Musa', 'Sara Jalal'
-  ];
+  // 4. Seed Classes
+  console.log('Seeding 4 classes...');
+  const class1 = await prisma.class.create({
+    data: { class_name: 'حلقة الإتقان (قرآن)', type: 'Quran', teacher_id: teacher1.id }
+  });
+  const class2 = await prisma.class.create({
+    data: { class_name: 'حلقة التميز (قرآن)', type: 'Quran', teacher_id: teacher1.id }
+  });
+  const class3 = await prisma.class.create({
+    data: { class_name: 'دورة الفقه الأساسي', type: 'Theory', teacher_id: teacher2.id, book_title: 'متن الزبد' }
+  });
+  const class4 = await prisma.class.create({
+    data: { class_name: 'دورة العقيدة والتوحيد', type: 'Theory', teacher_id: teacher2.id, book_title: 'الأصول الثلاثة' }
+  });
 
+  // 5. Seed Students
+  console.log('Seeding 50 students...');
   const students = [];
-  for (const name of studentNames) {
+  for (let i = 0; i < 50; i++) {
     const student = await prisma.student.create({
       data: {
-        name,
-        contact_info: '555-0101',
-        parent_info: 'Parent of ' + name,
-        date_of_birth: new Date('2015-01-01'),
-      },
+        name: `${arabicNames[i % arabicNames.length]} ${arabicNames[(i + 5) % arabicNames.length]}`,
+        contact_info: '05' + Math.floor(Math.random() * 90000000 + 10000000),
+        parent_info: 'ولي أمر الطالب ' + (i + 1),
+        date_of_birth: new Date('2010-01-01')
+      }
     });
     students.push(student);
   }
 
-  // 4. Seed Classes
-  console.log('Seeding classes...');
-  const class1 = await prisma.class.create({
+  // 6. Seed Schedules for Jan 2026
+  console.log('Seeding schedule for Jan 2026...');
+  const globalSchedule = await prisma.schedule.create({
     data: {
-      class_name: 'Beginners Hifz',
-      type: 'Quran',
-      teacher_id: teacher1.id,
-    },
+      month_year: '2026-01',
+      weekend_config: [5, 6], // Fri, Sat
+      manual_overrides: {}
+    }
   });
 
-  const class2 = await prisma.class.create({
-    data: {
-      class_name: 'Advanced Tajweed',
-      type: 'Quran',
-      teacher_id: teacher1.id,
-    },
-  });
+  // 7. Seed Enrollments, Attendance, and Progress
+  console.log('Seeding data for Jan 2026 (Good vs Undisciplined)...');
+  const allClassIds = [class1.id, class2.id, class3.id, class4.id];
+  const janDates = [];
+  for (let d = 1; d <= 31; d++) {
+    const date = new Date(2026, 0, d);
+    if (date.getDay() !== 5 && date.getDay() !== 6) { // Not weekend
+      janDates.push(date);
+    }
+  }
 
-  const class3 = await prisma.class.create({
-    data: {
-      class_name: 'Fiqh Basics',
-      type: 'Theory',
-      teacher_id: teacher2.id,
-    },
-  });
+  for (let i = 0; i < students.length; i++) {
+    const student = students[i];
+    // Assign to 1 or 2 classes
+    const classToEnroll = allClassIds[i % 4];
+    const secondClass = allClassIds[(i + 2) % 4];
+    
+    const enrollments = [
+       await prisma.enrollment.create({
+         data: { student_id: student.id, class_id: classToEnroll, status: 'Active', createdAt: new Date('2025-11-01') }
+       })
+    ];
+    if (i % 5 === 0) { // Every 5th student has two classes
+      enrollments.push(
+        await prisma.enrollment.create({
+          data: { student_id: student.id, class_id: secondClass, status: 'Active', createdAt: new Date('2025-11-01') }
+        })
+      );
+    }
 
-  const class4 = await prisma.class.create({
-    data: {
-      class_name: 'Islamic History',
-      type: 'Theory',
-      teacher_id: teacher2.id,
-    },
-  });
+    for (const enrollment of enrollments) {
+      const cls = [class1, class2, class3, class4].find(c => c.id === enrollment.class_id);
+      
+      const isUndisciplined = (i % 7 === 0); // ~14% students are undisciplined
 
-  // 5. Seed Enrollments
-  console.log('Seeding enrollments...');
-  const classes = [class1, class2, class3, class4];
-  
-  // Enroll each student in 1-2 random classes
-  for (const student of students) {
-    const numEnrollments = Math.floor(Math.random() * 2) + 1; // 1 or 2
-    const shuffledClasses = [...classes].sort(() => 0.5 - Math.random());
-    const selectedClasses = shuffledClasses.slice(0, numEnrollments);
+      if (isUndisciplined) {
+        // High absence to test 60% rule (Absent on 70% of active days)
+        for (let j = 0; j < janDates.length; j++) {
+           const status = (j % 3 === 0) ? 'Present' : 'Absent';
+           await prisma.attendance.create({
+             data: { enrollment_id: enrollment.id, date: janDates[j], status }
+           });
 
-    for (const cls of selectedClasses) {
-      await prisma.enrollment.create({
-        data: {
-          student_id: student.id,
-          class_id: cls.id,
-          status: 'Active',
-        },
+           // Add some progress even for undisciplined students on their present days
+           if (status === 'Present' && cls.type === 'Quran') {
+              await prisma.quranProgress.create({
+                data: {
+                  enrollment_id: enrollment.id, date: janDates[j], type: 'Hifz',
+                  surah_id: 114 - (j % 5), start_verse: 1, end_verse: 3, rating: 2 // Low rating
+                }
+              });
+              await prisma.quranProgress.create({
+                data: {
+                  enrollment_id: enrollment.id, date: janDates[j], type: 'Muraja',
+                  surah_id: 1, start_verse: 1, end_verse: 7, rating: 3
+                }
+              });
+           }
+        }
+      } else {
+        // Good student: Present 90% of time
+        for (let j = 0; j < janDates.length; j++) {
+          const status = (j % 12 === 0) ? 'Absent' : 'Present';
+          await prisma.attendance.create({
+            data: { enrollment_id: enrollment.id, date: janDates[j], status }
+          });
+
+          // Add Progress logs (Hifz & Muraja)
+          if (status === 'Present' && cls.type === 'Quran') {
+            await prisma.quranProgress.create({
+              data: {
+                enrollment_id: enrollment.id,
+                date: janDates[j],
+                type: 'Hifz',
+                surah_id: 2,
+                start_verse: (j * 5) % 280 + 1,
+                end_verse: (j * 5 + 4) % 280 + 2,
+                rating: 4 + (j % 2) // 4 or 5
+              }
+            });
+            await prisma.quranProgress.create({
+              data: {
+                enrollment_id: enrollment.id,
+                date: janDates[j],
+                type: 'Muraja',
+                surah_id: 30 - (j % 10),
+                start_verse: 1,
+                end_verse: 10,
+                rating: 5
+              }
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Add some Theory Progress
+  console.log('Seeding theory progress...');
+  for (let j = 0; j < janDates.length; j++) {
+    if (j % 5 === 0) {
+      await prisma.theoryProgress.create({
+        data: { class_id: class3.id, date: janDates[j], book_title: 'متن الزبد', topic_name: 'كتاب الصلاة', pages_read: 5, notes: 'شرح فقهي ميسر' }
+      });
+      await prisma.theoryProgress.create({
+        data: { class_id: class4.id, date: janDates[j], book_title: 'الأصول الثلاثة', topic_name: 'معرفة الرب', pages_read: 3, notes: 'تدريس العقيدة' }
       });
     }
   }
@@ -256,9 +319,7 @@ async function main() {
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
+  .then(async () => { await prisma.$disconnect(); })
   .catch(async (e) => {
     console.error(e);
     await prisma.$disconnect();
