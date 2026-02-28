@@ -293,7 +293,8 @@ const Reports = () => {
     const tableData = reportData.report.map((row, idx) => {
       const formatProgress = (p) => {
         if (!p || !p.surah_name) return '—';
-        return `${p.surah_name} (${t('reports.verse')} ${p.start}-${p.end})`;
+        const verseStr = p.start === p.end ? p.start : `${p.start}-${p.end}`;
+        return `${p.surah_name} (${t('reports.verse')} ${verseStr})`;
       };
 
       return [
