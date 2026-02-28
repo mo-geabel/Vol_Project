@@ -282,17 +282,32 @@ const Reports = () => {
       t('reports.student_number'),
       t('reports.Student_Name'), 
       t('reports.Age'), 
+      t('reports.Hifz_Start'), 
+      t('reports.Hifz_End'), 
+      t('reports.Muraja_Start'), 
+      t('reports.Muraja_End'), 
       t('reports.pres.'), 
       t('reports.abs.')
     ].map(h => fixArabicText(h));
     
-    const tableData = reportData.report.map((row, idx) => [
-      `${idx + 1}`,
-      fixArabicText(row.name),
-      row.age ? fixArabicText(`${t('reports.Age')}: ${row.age}`) : '—',
-      row.attendance.activeDays,
-      row.attendance.absentDays
-    ]);
+    const tableData = reportData.report.map((row, idx) => {
+      const formatProgress = (p) => {
+        if (!p || !p.surah_name) return '—';
+        return `${p.surah_name} (${t('reports.verse')} ${p.start}-${p.end})`;
+      };
+
+      return [
+        `${idx + 1}`,
+        fixArabicText(row.name),
+        row.age ? fixArabicText(`${row.age}`) : '—',
+        fixArabicText(formatProgress(row.hifz.start)),
+        fixArabicText(formatProgress(row.hifz.end)),
+        fixArabicText(formatProgress(row.muraja.start)),
+        fixArabicText(formatProgress(row.muraja.end)),
+        row.attendance.activeDays,
+        row.attendance.absentDays
+      ];
+    });
 
     const finalHeaders = isRTL ? [...tableHeaders].reverse() : tableHeaders;
     const finalData = isRTL ? tableData.map(row => [...row].reverse()) : tableData;
