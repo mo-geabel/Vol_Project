@@ -243,8 +243,35 @@ const getDashboardGraphs = async (req, res) => {
   }
 };
 
+// @desc    Get database usage status
+// @route   GET /api/admin/db-status
+// @access  Private/Admin
+const getDatabaseStatus = async (req, res) => {
+  try {
+    // Query for database size in bytes
+    const dbName = process.env.DATABASE_URL.split('/').pop().split('?')[0];
+    const result = await prisma.$queryRaw`SELECT pg_database_size(current_database()) as size_bytes`;
+    const sizeBytes = Number(result[0].size_bytes);
+    
+    // Neon free tier limit: 500 MiB = 500 * 1024 * 1024 bytes
+    const limitBytes = 500 * 1024 * 1024;
+    const usagePercent = (sizeBytes / limitBytes) * 100;
+
+    res.json({
+      sizeBytes,
+      limitBytes,
+      usagePercent: Math.min(usagePercent, 100),
+      isFull: usagePercent >= 95
+    });
+  } catch (error) {
+    console.error('Error fetching database status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getAdminStats,
   getTopStudents,
-  getDashboardGraphs
+  getDashboardGraphs,
+  getDatabaseStatus
 };

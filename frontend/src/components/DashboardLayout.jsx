@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../api/axios';
 import { 
   Menu, X, LogOut, Home, Users, BookOpen, 
   CalendarDays, Settings, GraduationCap, ClipboardList,
-  ChevronDown, ChevronRight, FileText, Languages, TrendingUp,ShieldCheck
+  ChevronDown, ChevronRight, FileText, Languages, TrendingUp, ShieldCheck, Database
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [openMenus, setOpenMenus] = useState(['Students']); // Default Students menu to open
+  const [dbStatus, setDbStatus] = useState(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
@@ -21,7 +23,20 @@ const DashboardLayout = () => {
   useEffect(() => {
     document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
     document.documentElement.lang = i18n.language;
-  }, [i18n.language, isRTL]);
+    
+    if (user?.role === 'admin') {
+      fetchDbStatus();
+    }
+  }, [i18n.language, isRTL, user]);
+
+  const fetchDbStatus = async () => {
+    try {
+      const res = await api.get('/admin/db-status');
+      setDbStatus(res.data);
+    } catch (error) {
+      console.warn('Failed to fetch DB status');
+    }
+  };
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'en' ? 'ar' : 'en';
@@ -175,6 +190,32 @@ const DashboardLayout = () => {
             );
           })}
         </nav>
+
+        {user?.role === 'admin' && dbStatus && sidebarOpen && (
+          <div className="px-6 py-4 border-t border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Database size={14} className={dbStatus.usagePercent > 85 ? 'text-red-500' : 'text-gray-400'} />
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Database</span>
+              </div>
+              <span className={`text-[10px] font-black uppercase ${
+                dbStatus.usagePercent > 90 ? 'text-red-600' : 
+                dbStatus.usagePercent > 70 ? 'text-amber-600' : 'text-primary-600'
+              }`}>
+                {dbStatus.usagePercent.toFixed(1)}%
+              </span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-1000 ${
+                  dbStatus.usagePercent > 90 ? 'bg-red-500' : 
+                  dbStatus.usagePercent > 70 ? 'bg-amber-500' : 'bg-primary-500'
+                }`}
+                style={{ width: `${dbStatus.usagePercent}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="p-4 border-t border-gray-100 shrink-0">
           <div className="flex items-center px-4 py-3 mb-2 rounded-xl bg-gray-50/50 overflow-hidden">
