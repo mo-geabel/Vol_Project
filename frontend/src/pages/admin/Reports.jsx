@@ -300,20 +300,19 @@ const Reports = () => {
     // Define column styles mapping based on visual index
     const getColumnStyles = () => {
       const baseStyles = {
-        0: { cellWidth: 10, halign: 'center', textColor: grayText, font: 'Amiri-Bold' },
-        1: { cellWidth: 45, halign: align, textColor: darkText, font: 'Amiri-Bold' },
-        2: { cellWidth: 12, halign: 'center' },
-        3: { cellWidth: 32 },
-        4: { cellWidth: 32, font: 'Amiri-Bold', textColor: darkGreen },
-        5: { cellWidth: 32 },
-        6: { cellWidth: 32, font: 'Amiri-Bold', textColor: [29, 78, 216] },
-        7: { cellWidth: 14, halign: 'center', textColor: [22, 120, 50], font: 'Amiri-Bold' },
-        8: { cellWidth: 14, halign: 'center', textColor: [200, 30, 30], font: 'Amiri-Bold' }
+        0: { cellWidth: 12, halign: 'center', textColor: grayText, font: 'Amiri-Bold' },
+        1: { cellWidth: 75, halign: align, textColor: darkText, font: 'Amiri-Bold' },
+        2: { cellWidth: 15, halign: 'center' },
+        3: { cellWidth: 34 },
+        4: { cellWidth: 34, font: 'Amiri-Bold', textColor: darkGreen },
+        5: { cellWidth: 34 },
+        6: { cellWidth: 34, font: 'Amiri-Bold', textColor: [29, 78, 216] },
+        7: { cellWidth: 16, halign: 'center', textColor: [22, 120, 50], font: 'Amiri-Bold' },
+        8: { cellWidth: 16, halign: 'center', textColor: [200, 30, 30], font: 'Amiri-Bold' }
       };
 
       if (!isRTL) return baseStyles;
 
-      // Swap styles for RTL (reverse indices)
       const reversedStyles = {};
       const totalCols = tableHeaders.length;
       Object.keys(baseStyles).forEach(idx => {
@@ -322,6 +321,8 @@ const Reports = () => {
       });
       return reversedStyles;
     };
+
+    const tableTotalWidth = 270; // 12+75+15+(34*4)+16+16 = 270
 
     autoTable(doc, {
       startY: currentY,
@@ -348,9 +349,7 @@ const Reports = () => {
       },
       columnStyles: getColumnStyles(),
       alternateRowStyles: { fillColor: [250, 253, 250] },
-      // Table Width = 10 + 45 + 12 + (32*4) + (14*2) = 223mm
-      // Centering logic: margin = (pageWidth - tableWidth) / 2
-      margin: { left: (pageWidth - 223) / 2, right: (pageWidth - 223) / 2 },
+      margin: { left: (pageWidth - tableTotalWidth) / 2, right: (pageWidth - tableTotalWidth) / 2 },
       tableLineColor: [200, 200, 200],
       tableLineWidth: 0.2
     });
@@ -674,16 +673,15 @@ const downloadTheoryPDF = () => {
     // Define column styles mapping based on visual index
     const getColumnStyles = () => {
       const baseStyles = {
-        0: { cellWidth: 10, halign: 'center', textColor: grayText, font: 'Amiri-Bold' },
-        1: { cellWidth: 60, halign: align, textColor: darkText, font: 'Amiri-Bold' },
-        2: { cellWidth: 16, halign: 'center' },
-        3: { cellWidth: 20, halign: 'center', textColor: [22, 120, 50], font: 'Amiri-Bold' },
-        4: { cellWidth: 20, halign: 'center', textColor: [200, 30, 30], font: 'Amiri-Bold' }
+        0: { cellWidth: 15, halign: 'center', textColor: grayText, font: 'Amiri-Bold' },
+        1: { cellWidth: 100, halign: align, textColor: darkText, font: 'Amiri-Bold' },
+        2: { cellWidth: 25, halign: 'center' },
+        3: { cellWidth: 35, halign: 'center', textColor: [22, 120, 50], font: 'Amiri-Bold' },
+        4: { cellWidth: 35, halign: 'center', textColor: [200, 30, 30], font: 'Amiri-Bold' }
       };
 
       if (!isRTL) return baseStyles;
 
-      // Swap styles for RTL (reverse indices)
       const reversedStyles = {};
       const totalCols = tableHeaders.length;
       Object.keys(baseStyles).forEach(idx => {
@@ -692,6 +690,8 @@ const downloadTheoryPDF = () => {
       });
       return reversedStyles;
     };
+
+    const theoryTableTotalWidth = 210; // 15+100+25+35+35 = 210
 
     autoTable(doc, {
       startY: currentY,
@@ -718,8 +718,7 @@ const downloadTheoryPDF = () => {
       },
       columnStyles: getColumnStyles(),
       alternateRowStyles: { fillColor: [250, 253, 250] },
-      // Centering logic: margin = (pageWidth - tableWidth) / 2
-      margin: { left: (pageWidth - 126) / 2, right: (pageWidth - 126) / 2 },
+      margin: { left: (pageWidth - theoryTableTotalWidth) / 2, right: (pageWidth - theoryTableTotalWidth) / 2 },
       tableLineColor: [200, 200, 200],
       tableLineWidth: 0.2
     });
@@ -771,14 +770,14 @@ const downloadTheoryPDF = () => {
           halign: 'center'
         },
         columnStyles: isRTL ? {
-          0: { cellWidth: 100, halign: align, font: 'Amiri-Regular' },
-          1: { cellWidth: 40, halign: 'center', font: 'Amiri-Bold', textColor: grayText }
+          0: { cellWidth: 150, halign: align, font: 'Amiri-Regular' },
+          1: { cellWidth: 50, halign: 'center', font: 'Amiri-Bold', textColor: grayText }
         } : {
-          0: { cellWidth: 40, halign: 'center', font: 'Amiri-Bold', textColor: grayText },
-          1: { cellWidth: 100, halign: align, font: 'Amiri-Regular' }
+          0: { cellWidth: 50, halign: 'center', font: 'Amiri-Bold', textColor: grayText },
+          1: { cellWidth: 150, halign: align, font: 'Amiri-Regular' }
         },
         alternateRowStyles: { fillColor: [248, 250, 255] },
-        margin: { left: (pageWidth - 140) / 2, right: (pageWidth - 140) / 2 },
+        margin: { left: (pageWidth - 200) / 2, right: (pageWidth - 200) / 2 },
       });
       
       currentY = doc.lastAutoTable.finalY + 10;
