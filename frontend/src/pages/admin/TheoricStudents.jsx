@@ -10,6 +10,7 @@ const TheoricStudents = () => {
   const isRTL = i18n.language === 'ar';
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [classes, setClasses] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -132,22 +133,42 @@ const TheoricStudents = () => {
     }
   };
 
+  const filteredStudents = students.filter(student => 
+    student.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) return <div className="p-8">{t('students.loading_theoric')}</div>;
 
   // Grouping logic
   const groupedStudents = classes.map(cls => ({
     ...cls,
-    students: students.filter(s => s.enrollments?.some(e => e.class_id === cls.id))
+    students: filteredStudents.filter(s => s.enrollments?.some(e => e.class_id === cls.id))
   }));
 
-  const unassignedStudents = students.filter(s => 
+  const unassignedStudents = filteredStudents.filter(s => 
     !s.enrollments?.some(e => e.class?.type === 'Theory')
   );
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">{t('students.theoric_title')}</h1>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+          <h1 className="text-2xl font-bold text-gray-900">{t('students.theoric_title')}</h1>
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              placeholder={t('progress.search_placeholder') || t('common.search')}
+              className="input-field py-2 ps-10 text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-gray-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button 
             onClick={() => {

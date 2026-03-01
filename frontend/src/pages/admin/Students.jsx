@@ -8,6 +8,7 @@ const Students = () => {
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const [students, setStudents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -98,13 +99,33 @@ const Students = () => {
     }
   };
 
+  const filteredStudents = students.filter(student => 
+    student.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) return <div className="p-8">{t('students.loading')}</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">{t('students.title')}</h1>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+          <h1 className="text-2xl font-bold text-gray-900">{t('students.title')}</h1>
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              placeholder={t('progress.search_placeholder') || t('common.search')}
+              className="input-field py-2 ps-10 text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <div className="absolute inset-y-0 start-0 ps-3 flex items-center pointer-events-none text-gray-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-3 w-full sm:w-auto justify-end">
           <button 
             onClick={() => setShowEnrollModal(true)}
             className="btn-primary bg-secondary-600 hover:bg-secondary-700 focus:ring-secondary-500 flex items-center gap-2"
@@ -134,7 +155,7 @@ const Students = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {students.map((student) => (
+              {filteredStudents.map((student) => (
                 <tr key={student.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -178,7 +199,7 @@ const Students = () => {
                   </td>
                 </tr>
               ))}
-              {students.length === 0 && (
+              {filteredStudents.length === 0 && (
                 <tr>
                   <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">{t('students.no_students')}</td>
                 </tr>
