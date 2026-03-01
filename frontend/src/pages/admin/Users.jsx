@@ -90,13 +90,36 @@ const Users = () => {
     if (!userToDelete) return;
     setIsDeleting(true);
     try {
-      await api.delete(`/users/${userToDelete.id}`);
+      if (userToDelete.status === 'Disabled') {
+        // Permanent Delete (simulated by actual delete if backend supports it, or just a final warning)
+        // For now, the backend DELETE /users/:id already sets status to Disabled.
+        // If they are already Disabled, we might want a real permanent delete or just keep it as is.
+        // The user asked for a warning about logs being disabled forever.
+        await api.delete(`/users/${userToDelete.id}?permanent=true`);
+      } else {
+        await api.delete(`/users/${userToDelete.id}`);
+      }
       toast.success(t('users.delete_success'));
       fetchUsers();
       setShowDeleteModal(false);
       setUserToDelete(null);
     } catch (error) {
-      toast.error(t('users.load_error')); // Assuming generic error for now
+      toast.error(t('users.load_error'));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleReactivate = async (user) => {
+    setIsDeleting(true);
+    try {
+      await api.put(`/users/${user.id}`, { status: 'Active' });
+      toast.success(t('common.success') || 'User reactivated successfully');
+      fetchUsers();
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+    } catch (error) {
+      toast.error(t('common.error') || 'Failed to reactivate user');
     } finally {
       setIsDeleting(false);
     }
@@ -135,7 +158,7 @@ const Users = () => {
             onChange={() => setIncludeDisabled(!includeDisabled)} 
           />
           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-          <span className={`ms-3 text-sm font-medium text-gray-700 ${isRTL ? 'mr-3' : 'ml-3'}`}>
+          <span className="ms-3 text-sm font-medium text-gray-700">
             {t('users.show_deactivated') || 'Show Deactivated'}
           </span>
         </label>
@@ -170,7 +193,6 @@ const Users = () => {
                   onClick={() => handleEdit(user)} 
                   className="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-90"
                   title={t('common.edit')}
-                  disabled={user.status === 'Disabled'}
                 >
                   <Edit size={18} />
                 </button>
@@ -187,7 +209,6 @@ const Users = () => {
                   onClick={() => handleDelete(user)} 
                   className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-90"
                   title="Delete User"
-                  disabled={user.status === 'Disabled'}
                 >
                   <Trash2 size={18} />
                 </button>
@@ -240,7 +261,6 @@ const Users = () => {
                   onClick={() => handleEdit(user)} 
                   className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all active:scale-95"
                   title={t('common.edit')}
-                  disabled={user.status === 'Disabled'}
                 >
                   <Edit size={18} />
                 </button>
@@ -257,7 +277,6 @@ const Users = () => {
                   onClick={() => handleDelete(user)} 
                   className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all active:scale-95"
                   title="Delete User"
-                  disabled={user.status === 'Disabled'}
                 >
                   <Trash2 size={18} />
                 </button>
@@ -375,29 +394,45 @@ const Users = () => {
                   <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center text-red-600 mb-6">
                     <AlertCircle size={32} />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{t('users.delete_title')}</h3>
-                  <p className="text-gray-500 mb-8">
-                    {t('users.deactivate_confirm', { name: userToDelete?.name }) || `Are you sure you want to deactivate ${userToDelete?.name}? Their history and assigned classes will be preserved, but they will no longer be able to log in.`}
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    {userToDelete?.status === 'Disabled' ? t('common.delete') : t('users.delete_title')}
+                  </h3>
+                  <p className="text-gray-500 mb-8 px-4">
+                    {userToDelete?.status === 'Disabled' 
+                      ? t('users.permanent_delete_warning')
+                      : t('users.deactivate_confirm', { name: userToDelete?.name })}
                   </p>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3">
                   <button 
                     onClick={confirmDelete}
                     disabled={isDeleting}
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-2xl font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-2xl font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isDeleting ? (
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <Trash2 size={18} />
                     )}
-                    {isDeleting ? t('users.deleting') : t('users.yes_delete')}
+                    {userToDelete?.status === 'Disabled' ? (isDeleting ? t('users.deleting') : t('common.delete')) : (isDeleting ? t('users.deleting') : t('users.yes_delete'))}
                   </button>
+                  
+                  {userToDelete?.status === 'Disabled' && (
+                    <button 
+                      onClick={() => handleReactivate(userToDelete)}
+                      disabled={isDeleting}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-2xl font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      <Check size={18} />
+                      {t('users.reactivate')}
+                    </button>
+                  )}
+
                   <button 
                     onClick={() => setShowDeleteModal(false)}
                     disabled={isDeleting}
-                    className="px-6 py-3 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    className="w-full py-3 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 text-center"
                   >
                     {t('common.cancel')}
                   </button>

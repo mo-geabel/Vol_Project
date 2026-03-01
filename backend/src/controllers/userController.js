@@ -75,6 +75,7 @@ const updateUser = async (req, res) => {
     if (name) updateData.name = name;
     if (username) updateData.username = username;
     if (role) updateData.role = role;
+    if (req.body.status) updateData.status = req.body.status;
 
     if (password) {
       const salt = await bcrypt.genSalt(10);

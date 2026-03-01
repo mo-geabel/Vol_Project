@@ -338,6 +338,7 @@
     "view_analytics": "View Growth Analytics"
   },
   "users": {
+    "manage_subtitle":"User Management",
     "title": "User Management",
     "add_user": "Add User",
     "edit_user": "Edit User",
@@ -354,6 +355,8 @@
     "delete_confirm": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone and will remove all their access.",
     "deactivate_confirm": "Are you sure you want to deactivate {{name}}? Their history and assigned classes will be preserved, but they will no longer be able to log in.",
     "show_deactivated": "Show Deactivated",
+    "reactivate": "Reactivate",
+    "permanent_delete_warning": "Warning: deleting this teacher will disable their attendance logs forever.",
     "yes_delete": "Yes, Delete User",
     "deleting": "Deleting...",
     "no_users": "No users found.",
