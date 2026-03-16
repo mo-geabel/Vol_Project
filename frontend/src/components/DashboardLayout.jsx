@@ -121,7 +121,7 @@ const DashboardLayout = () => {
                     className={`flex w-full items-center justify-between px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900`}
                   >
                     <div className="flex items-center min-w-0">
-                      <item.icon className="shrink-0 h-5 w-5 margin-inline-end-3" />
+                      <item.icon className="shrink-0 h-5 w-5 margin-inline-end-2" />
                       <span className={`truncate transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
                         {item.name}
                       </span>
@@ -155,7 +155,7 @@ const DashboardLayout = () => {
                             if (window.innerWidth < 1024) setSidebarOpen(false);
                           }}
                         >
-                          {child.icon && <child.icon className="shrink-0 h-4 w-4 margin-inline-end-3" />}
+                          {child.icon && <child.icon className="shrink-0 h-4 w-4 margin-inline-end-2" />}
                           {child.name}
                         </NavLink>
                       ))}
@@ -182,7 +182,7 @@ const DashboardLayout = () => {
                   if (window.innerWidth < 1024) setSidebarOpen(false);
                 }}
               >
-                <item.icon className="shrink-0 h-5 w-5 margin-inline-end-3" />
+                <item.icon className="shrink-0 h-5 w-5 margin-inline-end-2" />
                 <span className={`truncate transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
                   {item.name}
                 </span>
@@ -231,7 +231,7 @@ const DashboardLayout = () => {
             onClick={handleLogout}
             className="flex w-full items-center px-4 py-2 text-sm font-medium text-red-600 rounded-xl hover:bg-red-50 transition-colors"
           >
-            <LogOut className={`shrink-0 h-5 w-5 ${isRTL ? 'ml-3' : 'mr-3'}`} />
+            <LogOut className={`shrink-0 h-5 w-5 ${isRTL ? 'ml-2' : 'mr-2'}`} />
             <span className={`truncate transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
               {t('common.sign_out')}
             </span>
