@@ -122,7 +122,7 @@ const DashboardLayout = () => {
                   >
                     <div className="flex items-center min-w-0">
                       <item.icon className="shrink-0 h-5 w-5 margin-inline-end-2" />
-                      <span className={`truncate transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
+                      <span className={`truncate transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0'} ml-1`}>
                         {item.name}
                       </span>
                     </div>
@@ -183,7 +183,7 @@ const DashboardLayout = () => {
                 }}
               >
                 <item.icon className="shrink-0 h-5 w-5 margin-inline-end-2" />
-                <span className={`truncate transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
+                <span className={`truncate transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0'} ml-1 mr-1`}>
                   {item.name}
                 </span>
               </NavLink>
