@@ -82,7 +82,7 @@ const DashboardLayout = () => {
     <div className={`min-h-screen bg-gray-50 flex overflow-hidden ${isRTL ? 'font-arabic' : ''}`}>
       {/* Sidebar overlay (Mobile only) - Lowered z-index and removed blur to prevent modal interference */}
       <div 
-        className={`fixed inset-0 z-10 bg-gray-900/10 lg:hidden transition-all duration-300 ${
+        className={`fixed inset-0 z-40 bg-gray-900/10 lg:hidden transition-all duration-300 ${
           sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setSidebarOpen(false)}
@@ -90,7 +90,7 @@ const DashboardLayout = () => {
 
       {/* Sidebar */}
       <aside 
-        className={`fixed lg:static inset-y-0 start-0 z-20 w-64 bg-white border-inline-end border-gray-200 transform transition-all duration-300 ease-in-out flex flex-col ${
+        className={`fixed lg:static inset-y-0 start-0 z-50 w-64 bg-white border-inline-end border-gray-200 transform transition-all duration-300 ease-in-out flex flex-col ${
           sidebarOpen ? 'translate-x-0' : (isRTL ? 'translate-x-full lg:-me-64' : '-translate-x-full lg:-ms-64')
         }`}
       >
